@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { UserFacingError } from "./lib/errors.js";
+import { bootstrapCommand } from "./commands/bootstrap.js";
 
 type PackageManifest = {
   name?: string;
@@ -26,6 +27,13 @@ export async function createProgram(): Promise<Command> {
     .description(manifest.description ?? "Forge AI Assist CLI")
     .version(manifest.version ?? "0.0.0", "-v, --version", "output the current version")
     .showHelpAfterError("(run with --help for usage)");
+
+  program
+    .command("bootstrap")
+    .description("Initialize or update the Forge sidecar in the current repository.")
+    .action(async () => {
+      await bootstrapCommand();
+    });
 
   program.action(async () => {
     program.outputHelp();
