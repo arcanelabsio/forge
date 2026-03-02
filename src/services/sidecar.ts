@@ -1,5 +1,7 @@
 import path from 'node:path';
+import { mkdir } from 'node:fs/promises';
 import { SIDECAR_DIR_NAME, METADATA_FILENAME } from '../config/sidecar.js';
+import { readMetadata, writeMetadata, createNewMetadata, SidecarMetadata } from './metadata.js';
 
 /**
  * Resolved paths to the Forge sidecar and its metadata.
@@ -33,5 +35,30 @@ export function deriveSidecarContext(repoRoot: string): SidecarContext {
     repoPath,
     sidecarPath,
     metadataPath,
+  };
+}
+
+/**
+ * Initializes the Forge sidecar in the given repository root.
+ * If the sidecar already exists, it reads and returns the existing metadata.
+ * Otherwise, it creates the sidecar directory and initializes default metadata.
+ */
+export async function initializeSidecar(repoRoot: string): Promise<SidecarContext & { metadata: SidecarMetadata }> {
+  const context = deriveSidecarContext(repoRoot);
+  
+  // Ensure sidecar directory exists
+  await mkdir(context.sidecarPath, { recursive: true });
+
+  let metadata = await readMetadata(context.metadataPath);
+
+  if (!metadata) {
+    // First run initialization
+    metadata = createNewMetadata();
+    await writeMetadata(context.metadataPath, metadata);
+  }
+
+  return {
+    ...context,
+    metadata,
   };
 }

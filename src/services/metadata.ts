@@ -1,0 +1,106 @@
+import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
+import path from 'node:path';
+import { z } from 'zod';
+
+/**
+ * Sidecar metadata version.
+ */
+export const METADATA_VERSION = '1.0';
+
+/**
+ * Metadata schema using Zod for validation.
+ * Captures Forge's initialization state and run history within a repository.
+ */
+export const SidecarMetadataSchema = z.object({
+  /**
+   * Schema version.
+   */
+  version: z.string(),
+
+  /**
+   * ISO 8601 timestamp of sidecar creation.
+   */
+  createdAt: z.string().datetime(),
+
+  /**
+   * ISO 8601 timestamp of last update.
+   */
+  updatedAt: z.string().datetime(),
+
+  /**
+   * Details about the initial bootstrap run.
+   */
+  bootstrap: z.object({
+    completedAt: z.string().datetime(),
+    repoRootPath: z.string(),
+  }).optional(),
+
+  /**
+   * Arbitrary history of Forge runs against this repository.
+   */
+  history: z.array(z.object({
+    type: z.string(),
+    timestamp: z.string().datetime(),
+    payload: z.record(z.string(), z.unknown()).optional(),
+  })),
+});
+
+/**
+ * Type inferred from the schema.
+ */
+export type SidecarMetadata = z.infer<typeof SidecarMetadataSchema>;
+
+/**
+ * Reads sidecar metadata from the specified path.
+ * Returns null if the file does not exist.
+ */
+export async function readMetadata(metadataPath: string): Promise<SidecarMetadata | null> {
+  try {
+    const content = await readFile(metadataPath, 'utf8');
+    const json = JSON.parse(content);
+    return SidecarMetadataSchema.parse(json);
+  } catch (error: any) {
+    if (error.code === 'ENOENT') {
+      return null;
+    }
+    // If it exists but fails validation/parsing, let it throw
+    throw error;
+  }
+}
+
+/**
+ * Writes sidecar metadata atomically using temp-file and rename semantics.
+ * Ensures the sidecar directory exists before writing.
+ */
+export async function writeMetadata(metadataPath: string, metadata: SidecarMetadata): Promise<void> {
+  // Validate before writing to prevent corrupting state with invalid data
+  SidecarMetadataSchema.parse(metadata);
+
+  const dir = path.dirname(metadataPath);
+  await mkdir(dir, { recursive: true });
+
+  const tempPath = `${metadataPath}.${Math.random().toString(36).slice(2)}.tmp`;
+  const content = JSON.stringify(metadata, null, 2);
+
+  try {
+    await writeFile(tempPath, content, 'utf8');
+    await rename(tempPath, metadataPath);
+  } catch (error) {
+    // If rename failed, the temp file might still be there; we leave it for investigation
+    // but propagate the error to prevent caller from thinking it succeeded.
+    throw error;
+  }
+}
+
+/**
+ * Initializes a new metadata object with default values.
+ */
+export function createNewMetadata(): SidecarMetadata {
+  const now = new Date().toISOString();
+  return {
+    version: METADATA_VERSION,
+    createdAt: now,
+    updatedAt: now,
+    history: [],
+  };
+}
