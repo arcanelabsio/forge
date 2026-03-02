@@ -17,7 +17,9 @@
     "smoke": "node dist/cli.js --help"
   },
   "dependencies": {
-    "commander": "^14.0.1"
+    "commander": "^14.0.1",
+    "execa": "^9.6.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",

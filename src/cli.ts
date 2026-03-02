@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { createProgram, UserFacingError } from "./program.js";
+import { createProgram } from "./program.js";
+import { UserFacingError } from "./lib/errors.js";
 
 async function main(): Promise<void> {
   const program = await createProgram();

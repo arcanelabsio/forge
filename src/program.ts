@@ -1,14 +1,13 @@
 import { Command } from "commander";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { UserFacingError } from "./lib/errors.js";
 
 type PackageManifest = {
   name?: string;
   description?: string;
   version?: string;
 };
-
-export class UserFacingError extends Error {}
 
 async function readPackageManifest(): Promise<PackageManifest> {
   const manifestUrl = new URL("../package.json", import.meta.url);
