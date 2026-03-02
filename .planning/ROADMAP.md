@@ -16,7 +16,8 @@
 
 Establish the packaged entrypoint, repository guardrails, and sidecar lifecycle needed for every later flow.
 
-**Mapped requirements:** INVK-01, INVK-04, SIDE-01, SIDE-02, SIDE-03, SIDE-04, DELV-01
+**Goal:** Establish the packaged entrypoint, repository guardrails, and sidecar lifecycle needed for every later flow.
+**Requirements:** INVK-01, INVK-04, SIDE-01, SIDE-02, SIDE-03, SIDE-04, DELV-01
 
 **Success criteria:**
 
@@ -30,7 +31,8 @@ Establish the packaged entrypoint, repository guardrails, and sidecar lifecycle 
 
 Build the sidecar-first analysis engine that inspects a Git repository, records observed facts, and produces reviewable analysis artifacts.
 
-**Mapped requirements:** ANLY-01, ANLY-02, ANLY-03, ANLY-04
+**Goal:** Build the sidecar-first analysis engine that inspects a Git repository, records observed facts, and produces reviewable analysis artifacts.
+**Requirements:** ANLY-01, ANLY-02, ANLY-03, ANLY-04
 
 **Success criteria:**
 
@@ -43,7 +45,8 @@ Build the sidecar-first analysis engine that inspects a Git repository, records 
 
 Deliver the first full summoned workflow by exposing a GitHub Copilot discussion entrypoint that turns repository analysis into reviewable action plans.
 
-**Mapped requirements:** INVK-03, PLAN-01, PLAN-02, PLAN-03, PLAN-04
+**Goal:** Deliver the first full summoned workflow by exposing a GitHub Copilot discussion entrypoint that turns repository analysis into reviewable action plans.
+**Requirements:** INVK-03, PLAN-01, PLAN-02, PLAN-03, PLAN-04
 
 **Success criteria:**
 
@@ -57,7 +60,8 @@ Deliver the first full summoned workflow by exposing a GitHub Copilot discussion
 
 Generalize install and summon flows from the Copilot proof into a shared model that supports the broader assistant set from one managed source.
 
-**Mapped requirements:** INVK-02, ASST-01, ASST-02, ASST-03, ASST-04, ASST-05
+**Goal:** Generalize install and summon flows from the Copilot proof into a shared model that supports the broader assistant set from one managed source.
+**Requirements:** INVK-02, ASST-01, ASST-02, ASST-03, ASST-04, ASST-05
 
 **Success criteria:**
 
