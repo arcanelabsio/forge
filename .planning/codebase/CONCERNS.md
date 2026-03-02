@@ -1,70 +1,56 @@
 # Codebase Concerns
 
-## Overall assessment
+## Overall Assessment
 
-This repository is an early scaffold rather than an operational framework. The main risk is not hidden complexity; it is the gap between the stated ambition in `forge/README.md` and the minimal implementation shipped in `forge/forge/`.
+Forge is currently in an early bootstrap phase (Phase 1). The core repository guardrails and sidecar management are implemented and verified. The main risk is the transition from a minimal CLI to a functional analysis and planning engine.
 
-## Technical debt and fragility
+## Technical Debt & Fragility
 
-### Heuristic-only agent behavior
+### Minimal Command Set
+- Only the `bootstrap` command is implemented. The core value of Forge (analysis and planning) is still in the roadmap.
+- The CLI structure is designed for expansion but has not yet been stressed by complex, multi-step workflows.
 
-- `forge/forge/agents/discussions/agent.py:17` wires the entire agent to four string-matching helpers with no abstraction for model backends, rules, or pluggable analyzers.
-- `forge/forge/agents/discussions/agent.py:31` treats the first sentence as the "problem", which is brittle for multi-paragraph discussions, templates, or markdown-heavy inputs.
-- `forge/forge/agents/discussions/agent.py:35` and `forge/forge/agents/discussions/agent.py:42` infer resolution and status from raw keyword checks (`resolved`, `fixed`, `blocked`), so negation, quoted text, and historical context will be misread.
-- `forge/forge/agents/discussions/agent.py:51` classifies type from a few keywords only, which will fail on routine repo language such as "incident", "proposal", "regression", or "RFC".
+### Dependency on Subprocesses
+- `GitService` relies heavily on `execa` to call the `git` binary. While robust, it introduces a runtime dependency on the system's `git` version and configuration.
+- Error handling for git-specific failures (e.g., locked index, corrupted repo) is currently basic and may need more granular mapping as analysis grows more complex.
 
-### Core abstractions are too thin to support expansion claims
+### Metadata Schema Evolution
+- The `SidecarMetadata` schema is versioned but simple. As more features (analysis, planning, assistant installation) are added, the schema will need careful migration strategies to avoid breaking existing `.forge` directories.
 
-- `forge/forge/agents/base.py:19` validates only that input is a non-empty string; there is no schema validation, size control, structured input support, or trace metadata.
-- `forge/forge/agents/base.py:23` returns an unversioned free-form dict, which makes downstream automation fragile once multiple agents or output revisions exist.
-- `forge/forge/core/orchestration.py:14` only supports in-memory registration and synchronous execution; there is no dependency injection, lifecycle management, retries, concurrency, logging, or observability.
-- `forge/forge/core/signal.py:9` and `forge/forge/core/signal.py:13` currently return trimmed input unchanged, so the "Noise -> Signal -> Structure -> Action" pipeline described in `forge/README.md:9` is not implemented.
-- `forge/forge/core/signal.py:17` always returns an empty pattern list, which means any future code depending on learned or repeated patterns will start from a stub.
-- `forge/forge/core/categorization.py:9` duplicates keyword heuristics already present in `forge/forge/agents/discussions/agent.py:49`, creating a drift risk once either copy changes.
+## Missing Pieces
 
-### Packaging and repository layout increase cognitive load
+### Automated Testing
+- Formal automated unit and integration tests are missing (scheduled for Phase 5).
+- Current verification relies on manual scripts and developer discipline, which is a risk for long-term stability.
 
-- The nested layout (`forge/pyproject.toml` and package code under `forge/forge/`) is valid but easy to misread during onboarding, especially because the repository root also contains `.planning/`.
-- `forge/examples/example_discussion_run.py:8` manually mutates `sys.path`, which is a common symptom that packaging and execution ergonomics are not settled.
-- `forge/README.md:88` tells users to run `python examples/example_discussion_run.py`, but from the repository root the actual path is `forge/examples/example_discussion_run.py`, so first-run experience is likely to fail unless the user `cd`s into the inner `forge/` directory.
+### Analysis Engine
+- The core logic for repository analysis and fact extraction is not yet implemented (scheduled for Phase 2).
+- The "Sidecar-First" promise depends on this engine being reliable and non-intrusive.
 
-## Missing pieces
+### Assistant Integrations
+- Integration with GitHub Copilot and other assistants is currently only in the roadmap (Phases 3 and 4).
+- The project has not yet proven its ability to correctly target assistant-owned runtime directories across different operating systems.
 
-### No tests or validation harness
+## Security & Performance
 
-- There is no `tests/` directory and no test dependency declared in `forge/pyproject.toml:14`.
-- The example in `forge/examples/example_discussion_run.py:16` is the only executable usage path, so regressions in classification behavior would be caught manually, if at all.
+### Filesystem Access
+- Forge currently requires write access to the `.forge` directory within the target repository. While it aims to be "sidecar-only," incorrect path resolution could lead to accidental writes elsewhere in the repository.
+- `GitService` resolves the repository root, but there are no explicit "sandbox" checks to prevent Forge from traversing outside the repository boundary.
 
-### No real integrations despite framework positioning
+### Performance of Analysis
+- As the analysis engine is built, performance will become a concern for large repositories with deep histories or many thousands of files. Node.js's single-threaded nature may require worker threads or highly optimized subprocess orchestration.
 
-- `forge/README.md:27`, `forge/README.md:29`, and `forge/README.md:55` position the project as a model-agnostic framework, but `forge/pyproject.toml:14` declares zero runtime dependencies and the codebase contains no provider adapters, no HTTP clients, and no persistence layer.
-- Roadmap items in `forge/README.md:79` through `forge/README.md:86` depend on issue sources, milestone planning, and cross-repo analysis, but there are no extension points yet for storage, event ingestion, or external APIs.
+## Onboarding Risks
 
-### Limited assistant tooling
+### Developer Experience (DX)
+- There is currently no formal contributor guide or automated local development setup beyond `npm install` and `npm run build`.
+- New contributors must rely on the `.planning/` documents to understand the architectural intent.
 
-- `forge/scripts/assistant/collect_context.py:12` hardcodes a tiny topic map. New modules can be added without the script surfacing them, which makes assistant context collection silently stale.
-- `forge/scripts/assistant/collect_context.py:31` filters only for file existence; it does not validate that the chosen topic is complete or current relative to the codebase.
+### "Brownfield" Cleanup
+- The legacy Python scaffold was recently removed. Some documentation or mental models may still refer to the old structure, leading to confusion during onboarding.
 
-## Security and performance concerns
+## Most Likely Failure Modes
 
-### Security posture is mostly undefined
-
-- The current code does not expose an obvious secret-handling flaw, but it also has no patterns for redaction, credential loading, audit logging, or safe serialization once real integrations are added.
-- `forge/examples/example_discussion_run.py:27` prints raw results directly. That is harmless in the example, but it sets a precedent for dumping unreviewed content to stdout when future agents may process sensitive repository text.
-
-### Performance work has not started
-
-- `forge/forge/core/orchestration.py:18` executes everything synchronously, so scaling to many artifacts or larger repositories will require redesign rather than optimization.
-- The discussion agent repeatedly lowercases and scans the same text in separate methods (`forge/forge/agents/discussions/agent.py:35`, `forge/forge/agents/discussions/agent.py:42`, `forge/forge/agents/discussions/agent.py:51`). The immediate cost is trivial, but it shows no shared parsing pipeline for heavier future analysis.
-
-## Onboarding risks
-
-- The README markets the project as "production-oriented" (`forge/README.md:5`) while also calling it a "minimal architecture skeleton" (`forge/README.md:94`). A new contributor can easily misjudge maturity and spend time looking for systems that do not exist yet.
-- There is no contributor guide, development setup doc, or test command. The only assistant-oriented process guidance lives in `forge/docs/assistant/playbook.md`, which is useful for AI tooling but not enough for a human maintainer joining the project.
-- Because key modules are stubs (`forge/forge/core/signal.py`, `forge/forge/core/categorization.py`), contributors need product direction before writing code; the repository alone does not define acceptance criteria for "good" extraction or categorization behavior.
-
-## Most likely failure modes
-
-1. Users interpret the README as evidence of a usable framework, then discover the code is only a scaffold.
-2. New heuristics get copied into multiple modules and diverge because classification logic is already duplicated.
-3. Future integrations arrive before schemas, tests, or observability exist, making early production usage difficult to debug or trust.
+1. **Schema Mismatch**: Updating the CLI without a proper metadata migration path could corrupt existing `.forge` sidecars.
+2. **Analysis Bloat**: The analysis process becomes too slow or resource-intensive for large production repositories.
+3. **Integration Friction**: Changes in assistant runtime locations (e.g., a new VS Code or Copilot update) break Forge's automated installation flow.

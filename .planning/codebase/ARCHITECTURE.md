@@ -2,158 +2,87 @@
 
 ## Overview
 
-The current codebase is a minimal Python framework scaffold organized around a two-layer design:
+The FORGE project is a CLI tool built with TypeScript and Node.js. It is designed to provide repository-sidecar management and AI assistance.
 
-- Core primitives in [`forge/forge/core/orchestration.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/core/orchestration.py), [`forge/forge/core/signal.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/core/signal.py), and [`forge/forge/core/categorization.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/core/categorization.py).
-- Domain agents in [`forge/forge/agents/base.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/agents/base.py) and [`forge/forge/agents/discussions/agent.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/agents/discussions/agent.py).
+The architecture is service-oriented, with a clear separation between the CLI entry point, command handlers, and business logic services.
 
-The architecture is intentionally small. Only one end-to-end runtime path is currently wired: a discussion payload passed through `Orchestrator` into `DiscussionAgent`, producing a structured dictionary.
+## Core Components
+
+- **CLI Layer**: Built using the `commander` library. It handles argument parsing, command routing, and help generation.
+- **Command Layer**: Discrete functions that map CLI inputs to service calls.
+- **Service Layer**: Independent services that handle specific domain logic (Git operations, metadata management, sidecar orchestration).
+- **Configuration**: Zod-based schema validation for configuration and metadata.
 
 ## Entry Points
 
-### Example runtime entry point
+### CLI entry point
 
-[`forge/examples/example_discussion_run.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/examples/example_discussion_run.py) is the only executable application entry point in the repository.
+`src/cli.ts` is the main entry point for the executable. It:
+1. Initializes the CLI program.
+2. Parses process arguments.
+3. Handles global error reporting (using `UserFacingError`).
 
-Its control flow is:
+### Program Factory
 
-1. Resolve the outer project directory and insert it into `sys.path`.
-2. Import `DiscussionAgent` from [`forge/forge/agents/discussions/__init__.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/agents/discussions/__init__.py).
-3. Import `Orchestrator` from [`forge/forge/core/orchestration.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/core/orchestration.py).
-4. Build a sample string payload.
-5. Register the agent under its declared name (`"discussions"`).
-6. Dispatch the payload via `orchestrator.run_agent("discussions", payload)`.
-7. Print the returned structured result.
+`src/program.ts` defines the CLI structure. It:
+1. Loads the `package.json` to get version and name information.
+2. Defines all available commands and their descriptions.
+3. Configures help and error output behavior.
 
-### Assistant/tooling entry point
+## Layers
 
-[`forge/scripts/assistant/collect_context.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/scripts/assistant/collect_context.py) is a separate CLI-oriented support entry point. It does not participate in runtime analysis flow; instead, it maps topics to curated file lists for external coding assistants.
+### Layer 1: CLI & Routing
 
-## Runtime Layers
+Defined in `src/program.ts` and `src/commands/`.
+- Uses `commander` to define the command-line interface.
+- Maps user commands (e.g., `bootstrap`) to their respective handlers.
 
-### Layer 1: orchestration contract
+### Layer 2: Command Handlers
 
-[`forge/forge/core/orchestration.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/core/orchestration.py) defines `Orchestrator`, which owns an in-memory registry:
+Found in `src/commands/`.
+- Orchestrates high-level workflows by calling into multiple services.
+- Provides user-facing feedback (console logs).
+- Example: `bootstrapCommand` in `src/commands/bootstrap.ts`.
 
-- `register_agent(agent)` stores agent instances keyed by `agent.name`.
-- `run_agent(name, payload)` looks up the agent and delegates to `agent.run(payload)`.
+### Layer 3: Services
 
-This layer provides dispatch, but not scheduling, retries, dependency injection, persistence, or model/provider integration.
+Found in `src/services/`.
+- **GitService**: Interfaces with the local git repository (e.g., finding repo root).
+- **MetadataService**: Manages the reading and writing of `.forge/metadata.json`.
+- **SidecarService**: High-level service that ensures the `.forge` directory and its metadata are correctly initialized.
 
-### Layer 2: agent contract
+### Layer 4: Library & Helpers
 
-[`forge/forge/agents/base.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/agents/base.py) defines `BaseAgent`, the common abstraction for all agents:
-
-- `name` and `description` are the routing and metadata contract.
-- `run(raw_text)` is abstract and must return `dict[str, object]`.
-- `validate(raw_text)` enforces a non-empty string input.
-- `structured_output(**fields)` normalizes output shape to `{agent, description, result}`.
-
-This is the main package boundary in the current design: orchestration depends only on the abstract `BaseAgent`, while concrete logic lives in agent implementations.
-
-### Layer 3: domain implementation
-
-[`forge/forge/agents/discussions/agent.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/agents/discussions/agent.py) contains the only concrete agent, `DiscussionAgent`.
-
-`DiscussionAgent.run()` performs the whole analysis inline:
-
-- validate input
-- extract the first sentence as `problem`
-- infer `resolution` from simple keywords
-- infer workflow `status` from simple keywords
-- classify `discussion_type` from simple keywords
-- wrap all fields using `structured_output()`
-
-This means the domain agent currently owns both coordination and heuristic analysis logic. There is no intermediate service layer.
+Found in `src/lib/`.
+- Shared utilities and custom error classes like `UserFacingError`.
 
 ## Data Flow
 
-The active data path is:
-
-1. Raw text originates in [`forge/examples/example_discussion_run.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/examples/example_discussion_run.py).
-2. `Orchestrator.run_agent()` in [`forge/forge/core/orchestration.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/core/orchestration.py) forwards the text unchanged to the registered agent.
-3. `DiscussionAgent.run()` in [`forge/forge/agents/discussions/agent.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/agents/discussions/agent.py) transforms the string into a structured dictionary.
-4. The result is printed by the example script.
-
-Current output shape:
-
-```python
-{
-    "agent": "discussions",
-    "description": "Extracts structured insights from repository discussions.",
-    "result": {
-        "problem": "...",
-        "resolution": "...",
-        "status": "...",
-        "discussion_type": "...",
-    },
-}
-```
-
-No persistence, event bus, queue, network I/O, or external storage is involved.
+1. User executes a command (e.g., `npx forge-ai-assist bootstrap`).
+2. `src/cli.ts` calls `createProgram()` and starts parsing.
+3. `commander` routes the execution to `src/commands/bootstrap.ts`.
+4. `bootstrapCommand` calls `GitService` to find the repository root.
+5. `bootstrapCommand` calls `SidecarService` to initialize the sidecar.
+6. `SidecarService` uses `MetadataService` to check/create `metadata.json`.
+7. Success is reported back to the console.
 
 ## Control Flow
 
-The main synchronous call chain is:
+`cli.ts` -> `program.ts` -> `commands/*.ts` -> `services/*.ts`
 
-`example_discussion_run.main()` -> `Orchestrator.register_agent()` -> `Orchestrator.run_agent()` -> `DiscussionAgent.run()` -> `BaseAgent.validate()` / `BaseAgent.structured_output()`
+Error handling is centralized in `cli.ts`, which catches `UserFacingError` to display friendly error messages, while re-throwing unexpected errors.
 
-Error behavior is also simple and local:
+## Sidecar Pattern
 
-- `Orchestrator.run_agent()` raises `ValueError` if the requested name is not registered.
-- `DiscussionAgent.run()` raises `ValueError` if validation fails.
-
-There is no cross-module exception translation or recovery path.
-
-## Module Relationships
-
-### Core to agent dependency direction
-
-- [`forge/forge/core/orchestration.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/core/orchestration.py) depends on [`forge/forge/agents/base.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/agents/base.py) for the abstract contract.
-- [`forge/forge/agents/discussions/agent.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/agents/discussions/agent.py) depends on [`forge/forge/agents/base.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/agents/base.py).
-- The example script depends on both the core orchestration module and the discussions agent package.
-
-### Prepared but currently unused modules
-
-[`forge/forge/core/signal.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/core/signal.py) and [`forge/forge/core/categorization.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/core/categorization.py) expose `SignalExtractor` and `Categorizer`, but they are not called by `Orchestrator`, `BaseAgent`, or `DiscussionAgent`.
-
-Architecturally, they represent intended future decomposition:
-
-- `SignalExtractor` for preprocessing and pattern extraction.
-- `Categorizer` for classification and status normalization.
-
-At present, their responsibilities are duplicated in lighter form inside `DiscussionAgent`.
-
-## Package Boundaries
-
-### Outer project boundary
-
-[`forge/pyproject.toml`](/Users/ajit.gunturi/workspaces/playground/forge/forge/pyproject.toml) defines the installable Python project. The outer `forge/` directory acts as repository-local project root containing:
-
-- packaging metadata
-- README and docs
-- examples
-- scripts
-- the actual importable `forge` package directory
-
-### Importable package boundary
-
-[`forge/forge/__init__.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/__init__.py) marks the inner `forge/forge/` directory as the importable package root.
-
-Subpackage exports are curated through:
-
-- [`forge/forge/core/__init__.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/core/__init__.py)
-- [`forge/forge/agents/__init__.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/agents/__init__.py)
-- [`forge/forge/agents/discussions/__init__.py`](/Users/ajit.gunturi/workspaces/playground/forge/forge/forge/agents/discussions/__init__.py)
-
-These `__init__` files provide stable package-level import surfaces, even though the internal module graph is still small.
+The FORGE CLI follows a "sidecar" pattern:
+- It maintains its state within a `.forge/` directory in the target repository.
+- It respects the repository boundary, only modifying files inside `.forge/` unless explicitly instructed otherwise.
+- It uses a `metadata.json` file for versioned repository configuration.
 
 ## Architectural Assessment
 
-The current architecture is a scaffold rather than a full framework:
-
-- Strong separation exists between abstract agent contract, orchestration, and one domain agent.
-- The example path proves the minimum viable runtime loop.
-- Core preprocessing and categorization modules exist but are not yet integrated into the active path.
-- All execution is synchronous and in-process.
-- The repository is prepared for expansion into more agents and richer pipelines, but today it is centered on a single heuristic discussion-analysis workflow.
+The current architecture is modular and extensible:
+- Service-oriented design allows for easy addition of new capabilities.
+- Strong typing with TypeScript and schema validation with Zod ensures data integrity.
+- Centralized command routing makes the CLI surface area easy to manage.
+- Separation of concerns between the CLI interface and the business logic facilitates future expansion.

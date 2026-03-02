@@ -13,6 +13,12 @@
 - Phase 4: Assistant Runtime Expansion
 - Phase 5: Quality Gates
 
+## Quick Tasks Completed
+
+| Task | Description | Date |
+|------|-------------|------|
+| [02-cleanup-01] | Remove legacy Python scaffold and clean up documentation | 2026-03-02 |
+
 ## Coverage Snapshot
 
 - v1 requirements: 25

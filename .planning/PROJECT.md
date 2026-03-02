@@ -2,9 +2,9 @@
 
 ## What This Is
 
-Forge AI Assist is a tooling layer for AI coding assistants. It should be installable through a command like `npx forge-ai-assist@latest`, install or update summonable assistant entries in assistant-owned locations such as Copilot agent directories or Codex skill directories, and when invoked against a repository, keep repo-specific Forge artifacts inside a single ignorable Forge-owned directory rather than mutating user repository files directly.
+Forge AI Assist is a tooling layer for AI coding assistants. It is a Node.js/TypeScript CLI installable through `npx forge-ai-assist@latest`. When invoked against a repository, it keeps repo-specific Forge artifacts inside a single ignorable `.forge/` directory rather than mutating user repository files directly.
 
-The current repository already contains an early Python framework scaffold, but this project direction pivots the next milestone toward a maintainers-first install-and-summon experience modeled after GSD's ergonomics: one entry command, assistant-aware task entrypoints, centralized installation into assistant runtime directories, repository analysis, and generated action plans that users or maintainers can execute themselves.
+The project has transitioned from a legacy Python scaffold to a modern TypeScript implementation focused on a maintainers-first install-and-summon experience: one entry command, assistant-aware task entrypoints, centralized installation into assistant runtime directories, repository analysis, and generated action plans.
 
 ## Core Value
 
@@ -14,9 +14,9 @@ A maintainer can run one Forge install flow, summon the right assistant entrypoi
 
 ### Validated
 
-- ✓ Repository contains a Python package scaffold with a minimal orchestrator/agent architecture — existing
-- ✓ Repository already includes assistant-oriented documentation and helper scripts as a starting point — existing
-- ✓ Brownfield codebase map exists under `.planning/codebase/` to inform future planning — existing
+- ✓ Repository establishes a Node.js/TypeScript CLI foundation at the root — existing
+- ✓ Legacy Python scaffold and associated references have been removed — clean state
+- ✓ Basic sidecar directory (`.forge/`) and metadata management are implemented — existing
 
 ### Active
 
@@ -34,20 +34,17 @@ A maintainer can run one Forge install flow, summon the right assistant entrypoi
 
 ## Context
 
-This repository is currently a brownfield Python codebase with a nested package layout under `forge/`, no declared third-party runtime dependencies, and a minimal framework scaffold rather than a production-ready sidecar tool. The codebase map shows a substantial gap between the current implementation and the new product goal.
+This repository is a TypeScript project with a Node.js CLI entrypoint. It implements a sidecar architecture where Forge-managed artifacts are kept inside a single `.forge/` directory within the target repository.
 
-The desired user experience borrows GSD's summonability and command ergonomics, but splits concerns clearly: Forge should install assistant-specific summonable entries into assistant runtime locations, and those entries should analyze a Git repository while writing repo-specific Forge artifacts only into one ignorable directory.
-
-The main pain point is ecosystem fragmentation and manual copying. Each assistant expects different invocation patterns, skills, and install locations. Forge should reduce that fragmentation by managing those assistant-specific installation targets from one source while keeping repository changes manual and reviewable in v1.
+The desired user experience borrows GSD's summonability and command ergonomics: Forge manages assistant-specific installation targets from one source while keeping repository changes manual and reviewable.
 
 ## Constraints
 
-- **Brownfield**: Must evolve from the existing Python scaffold rather than assuming a blank repo — current codebase and packaging shape already exist
-- **Install UX**: Entry should feel similar to GSD's `npx` flow, while handling assistant-specific installation targets automatically
-- **Scope**: v1 must onboard one repository cleanly before optimizing for broader platform ambitions — keeps early roadmap focused
-- **Assistant Coverage**: Support should target all major AI coding assistants called out during questioning — avoids shipping a narrow single-assistant tool first
-- **Runtime Split**: Assistant summonable files may live in assistant-owned global/runtime directories, while repo-specific Forge outputs must live in one ignorable Forge-owned directory
-- **Git Requirement**: If the command is not invoked from a Git repository, it should exit rather than scaffold or analyze anything
+- **Architecture**: All repo-specific Forge-managed artifacts MUST live inside a single ignorable `.forge/` directory.
+- **Git Requirement**: If the command is not invoked from a Git repository, it MUST exit rather than scaffold or analyze anything.
+- **Install UX**: The entry point MUST feel similar to GSD's `npx` flow.
+- **Scope**: v1 focuses on onboarding one repository cleanly with analysis and planning capabilities.
+
 
 ## Key Decisions
 
