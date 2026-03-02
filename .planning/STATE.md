@@ -3,11 +3,11 @@
 **Last updated:** 2026-03-02
 **Current milestone:** v1
 **Current phase:** Phase 1
-**Status:** Planned
+**Status:** In Progress
 
 ## Active Roadmap
 
-- Phase 1: Bootstrap CLI
+- [x] Phase 1: Bootstrap CLI (Complete)
 - Phase 2: Repository Analysis
 - Phase 3: Copilot Planning Proof
 - Phase 4: Assistant Runtime Expansion
@@ -21,4 +21,7 @@
 
 ## Next Action
 
-- Begin Phase 1 planning and implementation around the npm CLI entrypoint, Git repository guardrails, and sidecar lifecycle
+- Plan and execute Phase 2 (Repository Analysis)
+
+
+
