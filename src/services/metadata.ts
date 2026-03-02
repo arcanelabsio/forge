@@ -36,6 +36,20 @@ export const SidecarMetadataSchema = z.object({
   }).optional(),
 
   /**
+   * Summary of repository analysis runs.
+   * Full payloads live in separate artifact files.
+   */
+  analysis: z.object({
+    lastRunId: z.string().optional(),
+    history: z.array(z.object({
+      id: z.string(),
+      timestamp: z.string().datetime(),
+      commitHash: z.string().optional(),
+      artifactPath: z.string(),
+    })).default([]),
+  }).optional(),
+
+  /**
    * Arbitrary history of Forge runs against this repository.
    */
   history: z.array(z.object({

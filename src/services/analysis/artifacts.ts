@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { SidecarContext } from '../sidecar.js';
+import { readMetadata, writeMetadata } from '../metadata.js';
 import { ANALYSIS_SUBDIR, RUNS_SUBDIR, LATEST_RUN_POINTER } from '../../config/analysis.js';
 import { AnalysisRun, AnalysisRunSummary } from '../../contracts/analysis.js';
 
@@ -37,11 +38,39 @@ export function deriveAnalysisPaths(context: SidecarContext): AnalysisPaths {
 }
 
 /**
- * Persists an analysis run to disk and updates the 'latest' pointer.
+ * Updates the sidecar metadata with the summary of an analysis run.
+ */
+export async function registerAnalysisRun(
+  context: SidecarContext,
+  summary: AnalysisRunSummary
+): Promise<void> {
+  const metadata = await readMetadata(context.metadataPath);
+  if (!metadata) {
+    throw new Error(`Metadata file not found at ${context.metadataPath}`);
+  }
+
+  // Initialize analysis section if it doesn't exist
+  if (!metadata.analysis) {
+    metadata.analysis = {
+      history: [],
+    };
+  }
+
+  metadata.analysis.lastRunId = summary.id;
+  metadata.analysis.history.push(summary);
+  metadata.updatedAt = new Date().toISOString();
+
+  await writeMetadata(context.metadataPath, metadata);
+}
+
+/**
+ * Persists an analysis run to disk, updates the 'latest' pointer, and
+ * registers the run in the sidecar metadata.
  *
- * This performs two writes:
+ * This performs three operations:
  * 1. A durable historical record in the `runs/` subdirectory.
  * 2. A copy to the `latest.json` pointer for easy retrieval.
+ * 3. A summary entry in the sidecar metadata index.
  */
 export async function persistAnalysisRun(
   context: SidecarContext,
@@ -64,12 +93,17 @@ export async function persistAnalysisRun(
   await writeFile(paths.latest, payload, 'utf-8');
 
   // Return summary for metadata update
-  return {
+  const summary: AnalysisRunSummary = {
     id: run.id,
     timestamp: run.timestamp,
     commitHash: run.observedFacts.repository.commitHash,
     artifactPath: path.relative(context.sidecarPath, artifactPath),
   };
+
+  // Register in metadata index
+  await registerAnalysisRun(context, summary);
+
+  return summary;
 }
 
 /**
