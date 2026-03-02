@@ -34,6 +34,43 @@ export class GitService {
   }
 
   /**
+   * Returns the current branch name.
+   */
+  async getBranch(): Promise<string> {
+    const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
+    return stdout.trim();
+  }
+
+  /**
+   * Returns the current commit hash.
+   */
+  async getCommitHash(): Promise<string> {
+    const { stdout } = await execa('git', ['rev-parse', 'HEAD']);
+    return stdout.trim();
+  }
+
+  /**
+   * Returns the remote URL for 'origin' if available.
+   */
+  async getRemoteUrl(): Promise<string | undefined> {
+    try {
+      const { stdout } = await execa('git', ['remote', 'get-url', 'origin']);
+      return stdout.trim();
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Returns the repository name inferred from the root directory name.
+   */
+  async getRepoName(): Promise<string> {
+    const root = await this.getRepoRoot();
+    const { basename } = await import('node:path');
+    return basename(root);
+  }
+
+  /**
    * Asserts that the current directory is inside a Git repository.
    * Throws RepositoryRequiredError if not.
    */
