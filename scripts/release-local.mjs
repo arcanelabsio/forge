@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -264,6 +264,8 @@ function publishGitHubRelease(version) {
 
   run("git", ["push", "origin", tag]);
 
+  const notesFile = writeReleaseNotesFile(tag);
+
   let releaseExists = true;
   try {
     run("gh", ["release", "view", tag], { capture: true });
@@ -271,10 +273,100 @@ function publishGitHubRelease(version) {
     releaseExists = false;
   }
 
-  if (!releaseExists) {
-    run("gh", ["release", "create", tag, "--verify-tag", "--title", tag, "--notes-file", ".github-release-notes.md"]);
+  try {
+    if (!releaseExists) {
+      run("gh", ["release", "create", tag, "--verify-tag", "--title", tag, "--notes-file", notesFile]);
+    } else {
+      run("gh", ["release", "edit", tag, "--title", tag, "--notes-file", notesFile]);
+    }
+  } finally {
+    rmSync(notesFile, { force: true });
+  }
+}
+
+function writeReleaseNotesFile(tag) {
+  const directory = mkdtempSync(join(tmpdir(), "forge-release-notes-"));
+  const notesFile = join(directory, "notes.md");
+  writeFileSync(notesFile, buildReleaseNotes(tag), "utf8");
+  return notesFile;
+}
+
+function buildReleaseNotes(tag) {
+  const previousTag = findPreviousTag(tag);
+  const commits = collectReleaseCommits(previousTag);
+  const manualNotes = loadManualReleaseNotes();
+  const lines = [
+    `# ${tag}`,
+    "",
+    previousTag ? `Changes since ${previousTag}.` : "Changes included in this release.",
+    "",
+    "## Changes",
+  ];
+
+  if (commits.length === 0) {
+    lines.push("- No new commits were found for this release range.");
   } else {
-    console.log(`GitHub Release ${tag} already exists; skipping create.`);
+    for (const commit of commits) {
+      lines.push(`- ${commit.subject} (${commit.shortSha})`);
+    }
+  }
+
+  if (manualNotes) {
+    lines.push("");
+    lines.push("## Additional Notes");
+    lines.push("");
+    lines.push(manualNotes);
+  }
+
+  return `${lines.join("\n").trim()}\n`;
+}
+
+function findPreviousTag(tag) {
+  try {
+    return run("git", ["describe", "--tags", "--abbrev=0", `${tag}^`], { capture: true }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function collectReleaseCommits(previousTag) {
+  const format = "%s%x09%h";
+  const args = ["log"];
+
+  if (previousTag) {
+    args.push(`${previousTag}..HEAD`);
+  }
+
+  args.push("--no-merges", "--reverse", `--pretty=format:${format}`);
+
+  const output = run("git", args, { capture: true }).trim();
+  if (!output) {
+    return [];
+  }
+
+  return output
+    .split("\n")
+    .map((line) => {
+      const [subject, shortSha] = line.split("\t");
+      return {
+        subject: subject?.trim() ?? "",
+        shortSha: shortSha?.trim() ?? "",
+      };
+    })
+    .filter((commit) => commit.subject.length > 0 && commit.shortSha.length > 0);
+}
+
+function loadManualReleaseNotes() {
+  try {
+    const raw = readFileSync(".github-release-notes.md", "utf8");
+    const stripped = raw
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("<!--"))
+      .join("\n")
+      .trim();
+    return stripped.length > 0 ? stripped : "";
+  } catch {
+    return "";
   }
 }
 
@@ -282,8 +374,10 @@ function printNextSteps(args, filename) {
   console.log("\nRelease checks passed.");
   console.log(`Tarball verified: ${filename}`);
 
-  if (args.publish) {
-    console.log("npm publish completed.");
+  if (args.publish || args.githubRelease) {
+    if (args.publish) {
+      console.log("npm publish completed.");
+    }
     if (args.githubRelease) {
       console.log("Git tag and GitHub Release completed.");
     } else {
@@ -321,12 +415,12 @@ async function main() {
       tarball = packArtifact();
       if (args.publish) {
         publishArtifact(tarball, args, tokenAuth?.env);
-        if (args.githubRelease) {
-          if (!args.version) {
-            throw new Error("A version is required when using --github-release.");
-          }
-          publishGitHubRelease(args.version);
+      }
+      if (args.githubRelease) {
+        if (!args.version) {
+          throw new Error("A version is required when using --github-release.");
         }
+        publishGitHubRelease(args.version);
       }
       printNextSteps(args, tarball);
     } finally {

@@ -27,19 +27,7 @@ release-tag:
 		echo "Example: make release-tag v1.0.0"; \
 		exit 1; \
 	fi
-	@VERSION=$$(echo "$(VERSION_ARG)" | sed 's/^v//'); \
-	TAG="v$$VERSION"; \
-	BRANCH=$$(git branch --show-current); \
-	git push origin "$$BRANCH"; \
-	if ! git rev-parse "$$TAG" >/dev/null 2>&1; then \
-		git tag -a "$$TAG" -m "$$TAG"; \
-	fi; \
-	git push origin "$$TAG"; \
-	if ! gh release view "$$TAG" >/dev/null 2>&1; then \
-		gh release create "$$TAG" --verify-tag --title "$$TAG" --notes-file .github-release-notes.md; \
-	else \
-		echo "GitHub Release $$TAG already exists; skipping create."; \
-	fi
+	npm run release:local -- "$(VERSION_ARG)" --github-release --skip-version-bump $(FORWARD_ARGS)
 
 %:
 	@:

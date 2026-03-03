@@ -14,7 +14,9 @@ This one command now:
 - pushes the current branch
 - creates or reuses the matching `vX.Y.Z` tag
 - pushes the tag
-- creates the GitHub Release if it does not already exist
+- creates or updates the GitHub Release
+- generates release notes from commits since the previous tag
+- appends any optional manual addendum from [`.github-release-notes.md`](/Users/ajitg/workspace/forge/.github-release-notes.md)
 
 2. Verify the public install:
 
@@ -38,3 +40,5 @@ If you need to handle GitHub tagging separately, the old fallback still exists:
 ```bash
 make release-tag v1.0.0
 ```
+
+This fallback now uses the same release script, so it also regenerates GitHub release notes from commit history instead of reusing a stale static notes file.
