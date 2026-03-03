@@ -5,6 +5,7 @@ import { DiscussionArtifactsRequiredError, DiscussionsOnlyAnalyzerError } from '
 import { deriveSidecarContext } from '../sidecar.js';
 import { loadLatestPreparedDiscussionDigest, prepareLatestDiscussionDigest } from './prepare.js';
 import { analyzeDiscussionRequestIntent, DiscussionAnalyzerIntent } from './request-intent.js';
+import { loadPreferredDiscussionCategory, savePreferredDiscussionCategory } from './preferences.js';
 import { runDiscussionFetch } from './run.js';
 
 export interface RunDiscussionAnalyzerOptions {
@@ -23,6 +24,7 @@ export interface RunDiscussionAnalyzerOptions {
 const DEFAULT_ANALYZER_REFRESH_LIMIT = 1000;
 
 export async function runDiscussionAnalyzer(options: RunDiscussionAnalyzerOptions): Promise<string> {
+  const preferredCategory = await loadPreferredDiscussionCategory(options.cwd);
   const intent = analyzeDiscussionRequestIntent({
     question: options.question,
     forceRefresh: options.forceRefresh,
@@ -32,6 +34,7 @@ export async function runDiscussionAnalyzer(options: RunDiscussionAnalyzerOption
     before: options.before,
     category: options.category,
     limit: options.limit,
+    preferredCategory,
   });
 
   if (!intent.normalizedQuestion) {
@@ -69,9 +72,14 @@ async function loadOrPrepareDigest(cwd: string): Promise<PreparedDiscussionDiges
 }
 
 function renderAnswer(digest: PreparedDiscussionDigest, intent: DiscussionAnalyzerIntent): string {
-  const records = selectRelevantRecords(digest, intent).slice(0, 12);
+  const selectedRecords = selectRelevantRecords(digest, intent);
+  const records = intent.answerShape.wantsCategoryHealth ? selectedRecords : selectedRecords.slice(0, 12);
   const countSummary = deriveCountSummary(records, intent);
   const categoryGroups = groupRecordsByCategory(countSummary?.records ?? records);
+
+  if (intent.answerShape.wantsCategoryHealth && intent.parsedFilters.category) {
+    return renderCategoryHealthAnswer(digest, intent, records);
+  }
 
   const lines: string[] = [
     `# GitHub Discussions Digest: ${digest.repository.owner}/${digest.repository.name}`,
@@ -225,7 +233,7 @@ async function refreshAndPrepareDigest(
   options: RunDiscussionAnalyzerOptions,
   intent: DiscussionAnalyzerIntent,
 ): Promise<PreparedDiscussionDigest> {
-  await runDiscussionFetch({
+  const fetched = await runDiscussionFetch({
     cwd: options.cwd,
     token: options.token,
     when: intent.parsedFilters.when,
@@ -234,6 +242,10 @@ async function refreshAndPrepareDigest(
     category: intent.parsedFilters.category,
     limit: options.limit ?? DEFAULT_ANALYZER_REFRESH_LIMIT,
   });
+
+  if (fetched.filters.resolvedCategory) {
+    await savePreferredDiscussionCategory(options.cwd, fetched.filters.resolvedCategory);
+  }
 
   return prepareLatestDiscussionDigest(options.cwd);
 }
@@ -369,6 +381,88 @@ function describeCountBasis(intent: DiscussionAnalyzerIntent): string {
   return segments.length > 0
     ? `${intent.temporalField} filtered by ${segments.join(' and ')}`
     : `${intent.temporalField} across the prepared digest`;
+}
+
+function renderCategoryHealthAnswer(
+  digest: PreparedDiscussionDigest,
+  intent: DiscussionAnalyzerIntent,
+  records: PreparedDiscussionDigest['records'],
+): string {
+  const categoryLabel = records[0]?.category ?? intent.parsedFilters.category ?? 'Selected Category';
+  const unresolvedOrBlocked = records.filter((record) => record.status === 'unresolved' || record.status === 'blocked');
+  const statusCounts = countBy(records.map((record) => record.status));
+  const themeGroups = groupRecordsByKind(records);
+
+  const lines: string[] = [
+    `# GitHub Discussions Category Health: ${categoryLabel}`,
+    '',
+    `**Question:** ${intent.question}  `,
+    `**Source Run:** \`${digest.sourceRunId}\`  `,
+    `**Answer Source:** ${describeAnswerSource(intent)}  `,
+    `**Total Discussions:** ${records.length}  `,
+    '',
+    '## Status Breakdown',
+    `- answered: ${(statusCounts.answered ?? 0) + (statusCounts.resolved ?? 0)}`,
+    `- unresolved: ${statusCounts.unresolved ?? 0}`,
+    `- blocked: ${statusCounts.blocked ?? 0}`,
+    '',
+    '## Major Themes',
+    ...renderThemeSummary(themeGroups),
+    '',
+  ];
+
+  if (unresolvedOrBlocked.length === 0) {
+    lines.push('## Unresolved And Blocked Discussions');
+    lines.push('No unresolved or blocked discussions in this category.');
+    lines.push('');
+  } else {
+    lines.push('## Unresolved And Blocked Discussions', '');
+    for (const record of unresolvedOrBlocked) {
+      lines.push(`### ${record.title} (#${record.number})`);
+      lines.push(`- **Status:** ${record.status}`);
+      lines.push(`- **Kind:** ${record.kind}`);
+      lines.push(`- **Issue:** ${record.issue}`);
+      lines.push(`- **Resolution:** ${record.resolution}`);
+      lines.push(`- **Action Items:** ${record.actionItems.join('; ')}`);
+      lines.push('');
+    }
+  }
+
+  if (records.length > 8) {
+    lines.push('## Discussions By Theme', '');
+    for (const [kind, kindRecords] of themeGroups) {
+      lines.push(`### ${kind} (${kindRecords.length})`);
+      for (const record of kindRecords.slice(0, 5)) {
+        lines.push(`- #${record.number} ${record.title} [${record.status}]`);
+      }
+      lines.push('');
+    }
+  }
+
+  return lines.join('\n').trim();
+}
+
+function groupRecordsByKind(
+  records: PreparedDiscussionDigest['records'],
+): Map<string, PreparedDiscussionDigest['records']> {
+  const grouped = new Map<string, PreparedDiscussionDigest['records']>();
+  for (const record of records) {
+    const existing = grouped.get(record.kind) ?? [];
+    existing.push(record);
+    grouped.set(record.kind, existing);
+  }
+  return new Map([...grouped.entries()].sort((left, right) => right[1].length - left[1].length));
+}
+
+function renderThemeSummary(
+  themeGroups: Map<string, PreparedDiscussionDigest['records']>,
+): string[] {
+  const lines: string[] = [];
+  for (const [kind, kindRecords] of themeGroups) {
+    const sampleTitles = kindRecords.slice(0, 3).map((record) => `#${record.number} ${record.title}`).join('; ');
+    lines.push(`- ${kind}: ${kindRecords.length} discussion(s)${sampleTitles ? ` — ${sampleTitles}` : ''}`);
+  }
+  return lines;
 }
 
 function groupRecordsByCategory(

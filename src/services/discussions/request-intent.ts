@@ -10,6 +10,10 @@ export interface DiscussionAnalyzerIntentOptions {
   before?: string;
   category?: string;
   limit?: number;
+  preferredCategory?: {
+    name: string;
+    slug: string;
+  };
 }
 
 export interface DiscussionAnalyzerIntent {
@@ -29,8 +33,10 @@ export interface DiscussionAnalyzerIntent {
     wantsCounts: boolean;
     wantsPatterns: boolean;
     wantsEffectiveness: boolean;
+    wantsCategoryHealth: boolean;
   };
   redirectQuestion?: string;
+  categorySource?: 'explicit' | 'preferred';
 }
 
 export function analyzeDiscussionRequestIntent(
@@ -42,11 +48,15 @@ export function analyzeDiscussionRequestIntent(
   const temporalField = detectTemporalField(normalizedQuestion);
 
   const extractedFilters = extractQuestionFilters(question, normalizedQuestion);
+  const chosenCategory = options.category ?? extractedFilters.category ?? getPreferredCategoryForQuestion(
+    normalizedQuestion,
+    options.preferredCategory,
+  );
   const parsedFilters = normalizeDiscussionFilters({
     when: options.when ?? extractedFilters.when,
     after: options.after ?? extractedFilters.after,
     before: options.before ?? extractedFilters.before,
-    category: options.category ?? extractedFilters.category,
+    category: chosenCategory,
     limit: options.limit,
   });
 
@@ -73,8 +83,10 @@ export function analyzeDiscussionRequestIntent(
       wantsEffectiveness: ['effectiveness', 'support quality', 'response time', 'sla', 'performance'].some(
         (keyword) => normalizedQuestion.includes(keyword),
       ),
+      wantsCategoryHealth: hasCurrentStatusIntent(normalizedQuestion) && Boolean(parsedFilters.category),
     },
     redirectQuestion: scope === 'issues' ? question.replace(/\bissues?\b/gi, 'discussions') : undefined,
+    categorySource: options.category || extractedFilters.category ? 'explicit' : chosenCategory ? 'preferred' : undefined,
   };
 }
 
@@ -126,6 +138,10 @@ function refreshReasonToMode(
 
 function hasCurrentStatusIntent(normalizedQuestion: string): boolean {
   if (/\b(current status|latest status|current state|latest state|up to date)\b/.test(normalizedQuestion)) {
+    return true;
+  }
+
+  if (/\bhow\s+is\s+.+\s+looking\b/.test(normalizedQuestion) || /\bhow\s+are\s+.+\s+looking\b/.test(normalizedQuestion)) {
     return true;
   }
 
@@ -222,5 +238,48 @@ function normalizeDatePhrase(raw: string): string | null {
 
 function extractCategory(question: string): string | undefined {
   const match = question.match(/\b(?:in|under)\s+(?:the\s+)?(.+?)\s+category\b/i);
-  return match?.[1]?.trim();
+  if (match?.[1]?.trim()) {
+    return match[1].trim();
+  }
+
+  const statusMatch = question.match(/\bhow\s+is\s+(.+?)\s+looking\b/i);
+  if (isSpecificCategoryCandidate(statusMatch?.[1])) {
+    return statusMatch[1].trim();
+  }
+
+  const lookingLikeMatch = question.match(/\bwhat(?:'s| is)\s+(.+?)\s+looking\s+like\b/i);
+  if (isSpecificCategoryCandidate(lookingLikeMatch?.[1])) {
+    return lookingLikeMatch[1].trim();
+  }
+
+  const statusOfMatch = question.match(/\bstatus\s+of\s+(.+?)(?:\s+discussions?)?(?:[?.!,]|$)/i);
+  if (isSpecificCategoryCandidate(statusOfMatch?.[1])) {
+    return statusOfMatch[1].trim();
+  }
+
+  return undefined;
+}
+
+function getPreferredCategoryForQuestion(
+  normalizedQuestion: string,
+  preferredCategory?: { name: string; slug: string },
+): string | undefined {
+  if (!preferredCategory) {
+    return undefined;
+  }
+
+  if (!hasCurrentStatusIntent(normalizedQuestion)) {
+    return undefined;
+  }
+
+  return preferredCategory.slug;
+}
+
+function isSpecificCategoryCandidate(value?: string): value is string {
+  const trimmed = value?.trim().toLowerCase();
+  if (!trimmed) {
+    return false;
+  }
+
+  return !['it', 'them', 'this', 'that'].includes(trimmed);
 }

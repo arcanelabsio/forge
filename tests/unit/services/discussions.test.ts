@@ -11,6 +11,7 @@ import { resolveGitHubToken } from '../../../src/services/discussions/auth.js';
 import { fetchGitHubDiscussions } from '../../../src/services/discussions/fetch.js';
 import { analyzeDiscussionRequestIntent } from '../../../src/services/discussions/request-intent.js';
 import * as discussionRunService from '../../../src/services/discussions/run.js';
+import { loadPreferredDiscussionCategory, savePreferredDiscussionCategory } from '../../../src/services/discussions/preferences.js';
 import {
   describeDiscussionFilters,
   normalizeDiscussionFilters,
@@ -582,6 +583,45 @@ describe('Discussions services', () => {
     expect(intent.temporalField).toBe('createdAt');
   });
 
+  it('uses a saved preferred category for current-status prompts', () => {
+    const intent = analyzeDiscussionRequestIntent({
+      question: 'how is it looking?',
+      preferredCategory: {
+        name: 'Customer Support',
+        slug: 'customer-support',
+      },
+    });
+
+    expect(intent.parsedFilters.category).toBe('customer-support');
+    expect(intent.categorySource).toBe('preferred');
+    expect(intent.answerShape.wantsCategoryHealth).toBe(true);
+  });
+
+  it('treats "how is customer support looking" as category health analysis', () => {
+    const intent = analyzeDiscussionRequestIntent({
+      question: 'how is customer support looking?',
+    });
+
+    expect(intent.parsedFilters.category).toBe('customer support');
+    expect(intent.refreshMode).toBe('fetch');
+    expect(intent.answerShape.wantsCategoryHealth).toBe(true);
+  });
+
+  it('persists the preferred discussion category', async () => {
+    const context = deriveSidecarContext(tempDir);
+    await writeMetadata(context.metadataPath, createNewMetadata());
+
+    await savePreferredDiscussionCategory(tempDir, {
+      id: 'cat1',
+      name: 'Customer Support',
+      slug: 'customer-support',
+    });
+
+    const preferred = await loadPreferredDiscussionCategory(tempDir);
+    expect(preferred?.slug).toBe('customer-support');
+    expect(preferred?.name).toBe('Customer Support');
+  });
+
   it('refreshes automatically for current-status questions and records trace metadata', async () => {
     const context = deriveSidecarContext(tempDir);
     const staleRun = {
@@ -655,7 +695,7 @@ describe('Discussions services', () => {
       });
 
       expect(answer).toContain('Current support thread');
-      expect(answer).toContain('## Customer Support');
+      expect(answer).toContain('GitHub Discussions Category Health: Customer Support');
 
       const latestAnswerRaw = await readFile(
         join(tempDir, '.forge/discussions/analysis/latest-answer.json'),
@@ -676,5 +716,90 @@ describe('Discussions services', () => {
     } finally {
       fetchSpy.mockRestore();
     }
+  });
+
+  it('renders category health answers with totals, status breakdown, unresolved items, and themes', async () => {
+    const context = deriveSidecarContext(tempDir);
+    const run = {
+      version: '1.0' as const,
+      id: '2026-03-03T12-00-00-000Z',
+      timestamp: '2026-03-03T12:00:00.000Z',
+      repository: {
+        owner: 'ajitgunturi',
+        name: 'forge',
+        remoteUrl: 'https://github.com/ajitgunturi/forge.git',
+      },
+      filters: normalizeDiscussionFilters({ category: 'customer-support', limit: 100 }),
+      pageInfo: {
+        hasNextPage: false,
+        endCursor: null,
+        fetchedPages: 1,
+      },
+      discussionCount: 3,
+      discussions: [
+        {
+          id: 'D_501',
+          number: 501,
+          title: 'Login outage',
+          url: 'https://github.com/ajitgunturi/forge/discussions/501',
+          createdAt: '2026-03-03T08:00:00.000Z',
+          updatedAt: '2026-03-03T09:00:00.000Z',
+          answerChosenAt: null,
+          author: 'ajitg',
+          category: { id: 'cat1', name: 'Customer Support', slug: 'customer-support' },
+          bodyText: 'Customers report login failures. blocked on upstream identity service.',
+          commentsCount: 2,
+          upvoteCount: 1,
+        },
+        {
+          id: 'D_502',
+          number: 502,
+          title: 'Billing question',
+          url: 'https://github.com/ajitgunturi/forge/discussions/502',
+          createdAt: '2026-03-03T08:30:00.000Z',
+          updatedAt: '2026-03-03T09:30:00.000Z',
+          answerChosenAt: '2026-03-03T10:00:00.000Z',
+          author: 'ajitg',
+          category: { id: 'cat1', name: 'Customer Support', slug: 'customer-support' },
+          bodyText: 'Customer asked about billing settings.',
+          commentsCount: 3,
+          upvoteCount: 1,
+        },
+        {
+          id: 'D_503',
+          number: 503,
+          title: 'Provisioning stuck',
+          url: 'https://github.com/ajitgunturi/forge/discussions/503',
+          createdAt: '2026-03-03T08:45:00.000Z',
+          updatedAt: '2026-03-03T09:45:00.000Z',
+          answerChosenAt: null,
+          author: 'ajitg',
+          category: { id: 'cat1', name: 'Customer Support', slug: 'customer-support' },
+          bodyText: 'Provisioning remains unresolved after retries.',
+          commentsCount: 1,
+          upvoteCount: 1,
+        },
+      ],
+    };
+
+    await writeMetadata(context.metadataPath, createNewMetadata());
+    await persistDiscussionRun(context, run);
+    await persistPreparedDiscussionDigest(tempDir, run);
+
+    const answer = await runDiscussionAnalyzer({
+      cwd: tempDir,
+      question: 'how is customer support looking?',
+      refreshAnalysis: true,
+    });
+
+    expect(answer).toContain('GitHub Discussions Category Health: Customer Support');
+    expect(answer).toContain('**Total Discussions:** 3');
+    expect(answer).toContain('## Status Breakdown');
+    expect(answer).toContain('- unresolved: 1');
+    expect(answer).toContain('- blocked: 1');
+    expect(answer).toContain('## Unresolved And Blocked Discussions');
+    expect(answer).toContain('Login outage');
+    expect(answer).toContain('Provisioning stuck');
+    expect(answer).toContain('## Major Themes');
   });
 });
