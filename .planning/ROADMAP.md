@@ -126,3 +126,48 @@ Close the auditability gap left after bootstrap by producing milestone-grade ver
 - The roadmap deliberately prioritizes sidecar-safe analysis before broad assistant expansion because v1 value is repository understanding and planning, not repo mutation
 - Research recommendations that imply writing generated outputs into the target repository are deferred or narrowed to assistant-owned runtime locations plus the ignorable Forge sidecar
 - GitHub Copilot discussion analysis is the first end-to-end proof; broader multi-assistant parity follows after that proof works
+
+## Phase 7: Installer Simplification And GitHub Discussions Ingest (Complete)
+
+Recast Forge as a single-entry interactive installer invoked via `npx forge-ai-assist@latest`, while adding a sidecar-native GitHub Discussions ingestion capability for assistant-driven analysis.
+
+**Goal:** Recast Forge as a single-entry interactive installer exposed as `forge`, remove the legacy direct CLI command surface, and add an assistant summonable capability that fetches GitHub Discussions into the `.forge` sidecar for later analysis.
+**Requirements:** EXTD-03
+**Depends on:** Phase 6
+**Plans:** 3 plans
+
+**Success criteria:**
+
+- Running `npx forge-ai-assist@latest` launches Forge as the `forge` binary and immediately enters the interactive assistant-selection install flow
+- The published CLI no longer exposes bootstrap/analyze/plan/install subcommands as the primary user experience
+- Forge can install a summonable GitHub Discussions fetcher skill or agent for supported assistants from the existing shared runtime model
+- The discussions fetch flow derives the current repository owner and name from `origin`, fetches discussion data through an authenticated GitHub API path, and stores durable artifacts only under `.forge`
+- The discussions workflow checks for `GH_TOKEN` or `GITHUB_TOKEN` before fetching and tells the user to configure one in their shell when both are missing
+- The discussions workflow supports user-provided fetch filters including relative windows (`today`, `yesterday`, `last week`), explicit `after`/`before` bounds, and discussion category constraints
+
+Plans:
+- [x] 07-01 - Rework packaging and CLI entry into the default interactive installer
+- [x] 07-02 - Add GitHub Discussions fetch assets and sidecar persistence
+- [x] 07-03 - Add token preflight and user-driven discussion filters
+
+## Phase 8: Cross-Assistant Forge Discussion Analyzer Summonable (Complete)
+
+Turn the attached `gh-discussion-analyzer.agent.md` behavior into a Forge-managed summonable named `forge-discussion-analyzer` that can be installed across supported assistant runtimes while offloading the heavy execution logic and context into Forge.
+
+**Goal:** Deliver a named cross-assistant summonable, `forge-discussion-analyzer`, that users can invoke from assistant-native `/agent` or equivalent surfaces while Forge handles data fetching, sidecar preparation, runtime scripts, and context minimization behind the scenes.
+**Requirements:** EXTD-03
+**Depends on:** Phase 7
+**Plans:** 3 plans
+
+**Success criteria:**
+
+- Forge installs a distinct summonable named `forge-discussion-analyzer` for supported assistant runtimes instead of only a generic Forge entry
+- A user can invoke the installed summonable from assistant-native surfaces such as Copilot `/agent` selection and ask a follow-up question without pasting the full legacy `.agent.md` body
+- Forge owns the discussions-fetch, caching, and preprocessing scripts so assistant-installed assets stay compact and focused on invocation semantics
+- The analysis workflow uses `.forge/discussions` artifacts plus Forge-managed preprocessing outputs to minimize model context while preserving analysis quality
+- Supported assistants receive the closest native equivalent of the same summonable capability, with explicit no-op or degradation behavior where a platform cannot mirror Copilot exactly
+
+Plans:
+- [x] 08-01 - Add named summonable asset support and install forge-discussion-analyzer across assistants
+- [x] 08-02 - Build the Forge-managed discussion analysis runtime and compact context pipeline
+- [x] 08-03 - Wire assistant-native invocation flows and verify cross-assistant summonability

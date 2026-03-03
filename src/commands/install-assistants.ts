@@ -1,22 +1,22 @@
 import { assistantInstallService } from '../services/assistants/install.js';
-import { forgeAgentEntry } from '../services/assistants/forge-agent.js';
-import { AssistantOperationResult } from '../contracts/assistants.js';
+import { AssistantId, AssistantOperationResult } from '../contracts/assistants.js';
 
 /**
- * Handles the CLI surface for installing and updating all supported AI assistants.
+ * Handles the CLI surface for installing the currently exposed Copilot summonables.
  *
- * This command generalizes the Phase 3 Copilot proof to the broader assistant set
- * supported by the Forge adapter registry.
+ * Other assistant adapters remain in the codebase but are not exposed in the user-facing CLI yet.
  */
 export async function installAssistantsCommand(cwd: string): Promise<void> {
   try {
-    console.log('Installing/Updating Forge AI assistant entrypoints...');
-    
-    const results = await assistantInstallService.installAll(cwd, forgeAgentEntry);
-    
+    const requestedAssistants: AssistantId[] = ['copilot'];
+
+    console.log('Installing Forge Copilot summonables...');
+
+    const results = await assistantInstallService.installDefaultSummonables(cwd, requestedAssistants);
+
     console.log('\nAssistant Status Summary:');
     console.log('-------------------------');
-    
+
     let hasSuccess = false;
     for (const result of results) {
       const statusIcon = getStatusIcon(result.status);
@@ -27,14 +27,13 @@ export async function installAssistantsCommand(cwd: string): Promise<void> {
     }
     
     if (hasSuccess) {
-      console.log('\nSuccess! At least one assistant entrypoint is ready.');
-      console.log('You can now summon the Forge agent in your preferred AI assistant.');
+      console.log('\nSuccess! Forge Copilot summonables are ready.');
+      console.log('You can now use Copilot /agent with forge-discussion-analyzer.');
     } else {
-      console.log('\nNo assistants were installed or updated. Check the status messages above.');
+      console.log('\nCopilot summonables were not installed or updated. Check the status messages above.');
     }
   } catch (error) {
-    console.error('\nFailed to install assistant adapters:', error instanceof Error ? error.message : String(error));
-    process.exit(1);
+    throw error;
   }
 }
 

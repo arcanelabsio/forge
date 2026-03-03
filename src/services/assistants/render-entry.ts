@@ -38,6 +38,13 @@ export class EntryRenderer {
         lines.push('');
         lines.push(`Usage: \`${cmd.usage}\``);
         lines.push('');
+        if (cmd.examples && cmd.examples.length > 0) {
+          lines.push('Examples:');
+          for (const example of cmd.examples) {
+            lines.push(`- \`${example}\``);
+          }
+          lines.push('');
+        }
       }
     }
 

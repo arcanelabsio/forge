@@ -1,12 +1,12 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { execa } from 'execa';
-import { mkdtemp, rm, writeFile, mkdir, stat, readFile } from 'fs/promises';
+import { mkdtemp, mkdir, rm, writeFile, stat, readFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
 const CLI_PATH = join(process.cwd(), 'dist/cli.js');
 
-describe('CLI Smoke Tests - Full Flow', () => {
+describe('CLI Smoke Tests - Installer Flow', () => {
   let tempRepoPath: string;
 
   beforeEach(async () => {
@@ -19,17 +19,12 @@ describe('CLI Smoke Tests - Full Flow', () => {
     }
   });
 
-  const runCLI = (args: string[], cwd: string = tempRepoPath) => {
-    return execa('node', [CLI_PATH, ...args], { cwd });
-  };
-
-  const initGitRepo = async (path: string) => {
-    await execa('git', ['init'], { cwd: path });
-    await execa('git', ['config', 'user.email', 'test@example.com'], { cwd: path });
-    await execa('git', ['config', 'user.name', 'Test User'], { cwd: path });
-    await writeFile(join(path, 'package.json'), '{}');
-    await execa('git', ['add', '.'], { cwd: path });
-    await execa('git', ['commit', '-m', 'Initial commit'], { cwd: path });
+  const runCLI = (
+    args: string[],
+    cwd: string = tempRepoPath,
+    options: { input?: string } = {}
+  ) => {
+    return execa('node', [CLI_PATH, ...args], { cwd, input: options.input });
   };
 
   const fileExists = async (path: string) => {
@@ -41,75 +36,118 @@ describe('CLI Smoke Tests - Full Flow', () => {
     }
   };
 
-  describe('bootstrap', () => {
-    it('creates .forge/metadata.json in a git repo', async () => {
-      await initGitRepo(tempRepoPath);
-      const { exitCode } = await runCLI(['bootstrap']);
+  describe('default installer', () => {
+    it('installs Copilot summonables from the default flow', async () => {
+      const { exitCode, stdout } = await runCLI([], tempRepoPath);
+
       expect(exitCode).toBe(0);
-      expect(await fileExists(join(tempRepoPath, '.forge/metadata.json'))).toBe(true);
+      expect(stdout).toContain('Installing Forge Copilot summonables');
+      expect(await fileExists(join(tempRepoPath, '.copilot/agents/forge-agent.agent.md'))).toBe(true);
+      expect(await fileExists(join(tempRepoPath, '.copilot/agents/forge-discussion-analyzer.agent.md'))).toBe(true);
+      expect(await fileExists(join(tempRepoPath, '.claude/forge-agent.md'))).toBe(false);
+      expect(await fileExists(join(tempRepoPath, '.codex/forge-agent.md'))).toBe(false);
+      expect(await fileExists(join(tempRepoPath, '.gemini/forge-agent.md'))).toBe(false);
     });
 
-    it('exits with error outside a git repo', async () => {
-      try {
-        await runCLI(['bootstrap']);
-        expect.fail('Should have failed');
-      } catch (error: any) {
-        expect(error.exitCode).not.toBe(0);
-        expect(error.stderr).toContain('Not in a Git repository');
+    it('installs Copilot agents into .copilot/agents for /agent discovery', async () => {
+      const { exitCode } = await runCLI([], tempRepoPath);
+
+      expect(exitCode).toBe(0);
+      expect(await fileExists(join(tempRepoPath, '.copilot/agents/forge-agent.agent.md'))).toBe(true);
+      expect(await fileExists(join(tempRepoPath, '.copilot/agents/forge-discussion-analyzer.agent.md'))).toBe(true);
+
+      const copilotAnalyzer = await readFile(
+        join(tempRepoPath, '.copilot/agents/forge-discussion-analyzer.agent.md'),
+        'utf8'
+      );
+      if (!copilotAnalyzer) {
+        throw new Error('missing copilot analyzer asset');
       }
+      expect(copilotAnalyzer).toContain('Forge Discussion Analyzer');
+      expect(copilotAnalyzer).toContain('forge-discussion-analyzer');
     });
   });
 
-  describe('analyze', () => {
-    it('generates analysis artifacts in .forge/analysis/', async () => {
-      await initGitRepo(tempRepoPath);
-      await runCLI(['bootstrap']);
-      
-      const { exitCode } = await runCLI(['analyze']);
+  describe('help surface', () => {
+    it('presents forge as an install-first CLI without the legacy subcommands', async () => {
+      const { stdout } = await runCLI(['--help']);
+
+      expect(stdout).toContain('Usage: forge');
+      expect(stdout).toContain('Install Forge Copilot summonables');
+      expect(stdout).not.toContain('--assistants <ids>');
+      expect(stdout).not.toContain('--yes');
+      expect(stdout).not.toContain('bootstrap');
+      expect(stdout).not.toContain('analyze');
+      expect(stdout).not.toContain('plan');
+      expect(stdout).not.toContain('install-assistants');
+      expect(stdout).not.toContain('install-copilot');
+    });
+  });
+
+  describe('discussion analyzer runtime', () => {
+    it('runs forge-discussion-analyzer from prepared sidecar artifacts', async () => {
+      const analysisDir = join(tempRepoPath, '.forge/discussions/analysis');
+      await mkdir(analysisDir, { recursive: true });
+      await writeFile(
+        join(analysisDir, 'latest.json'),
+        JSON.stringify({
+          version: '1.0',
+          id: 'prepared-run',
+          sourceRunId: 'fetch-run',
+          timestamp: '2026-03-03T10:00:00.000Z',
+          repository: {
+            owner: 'ajitgunturi',
+            name: 'forge',
+            remoteUrl: 'https://github.com/ajitgunturi/forge.git',
+          },
+          filters: {
+            limit: 25,
+          },
+          totals: {
+            discussions: 1,
+            statuses: { unresolved: 1 },
+            kinds: { consultation: 1 },
+          },
+          records: [
+            {
+              number: 101,
+              title: 'Patterns in support',
+              url: 'https://github.com/ajitgunturi/forge/discussions/101',
+              category: 'Ideas',
+              status: 'unresolved',
+              kind: 'consultation',
+              issue: 'Users repeatedly ask about authentication setup and filtering.',
+              resolution: 'No clear resolution is recorded yet.',
+              keyContext: ['authentication setup', 'discussion filtering'],
+              actionItems: ['Confirm current owner'],
+              updatedAt: '2026-03-03T09:00:00.000Z',
+            },
+          ],
+        }, null, 2),
+        'utf8'
+      );
+
+      const { exitCode, stdout } = await runCLI([
+        '--run-summonable',
+        'forge-discussion-analyzer',
+        '--question',
+        'What recurring patterns are visible in support discussions?',
+      ]);
+
       expect(exitCode).toBe(0);
-      
-      expect(await fileExists(join(tempRepoPath, '.forge/analysis/latest.json'))).toBe(true);
+      expect(stdout).toContain('GitHub Discussions Digest');
+      expect(stdout).toContain('Pattern Analysis');
+      expect(stdout).toContain('Patterns in support');
     });
   });
 
-  describe('plan', () => {
-    it('generates a plan in .forge/planning/ based on analysis', async () => {
-      await initGitRepo(tempRepoPath);
-      await runCLI(['bootstrap']);
-      await runCLI(['analyze']);
-      
-      const { exitCode, stdout } = await runCLI(['plan', '--task', 'Implement a new feature']);
-      expect(exitCode).toBe(0);
-      
-      const plansDir = join(tempRepoPath, '.forge/planning/plans');
-      expect(await fileExists(plansDir)).toBe(true);
-      expect(await fileExists(join(tempRepoPath, '.forge/planning/latest.json'))).toBe(true);
-      
-      expect(stdout).toContain('Planning complete');
-    });
-  });
+  describe('packaging metadata', () => {
+    it('publishes the forge binary while keeping the package name', async () => {
+      const manifestRaw = await readFile(join(process.cwd(), 'package.json'), 'utf8');
+      const manifest = JSON.parse(manifestRaw) as { name: string; bin: Record<string, string> };
 
-  describe('idempotency', () => {
-    it('multiple runs do not corrupt metadata or sidecar', async () => {
-      await initGitRepo(tempRepoPath);
-      
-      // Run bootstrap twice
-      await runCLI(['bootstrap']);
-      const metadataFirstRaw = await readFile(join(tempRepoPath, '.forge/metadata.json'), 'utf-8');
-      const metadataFirst = JSON.parse(metadataFirstRaw);
-      
-      await runCLI(['bootstrap']);
-      const metadataSecondRaw = await readFile(join(tempRepoPath, '.forge/metadata.json'), 'utf-8');
-      const metadataSecond = JSON.parse(metadataSecondRaw);
-      
-      expect(metadataFirst.createdAt).toBe(metadataSecond.createdAt);
-      expect(metadataSecond.history.length).toBeGreaterThan(metadataFirst.history.length);
-
-      // Run analyze twice
-      await runCLI(['analyze']);
-      await runCLI(['analyze']);
-      
-      expect(await fileExists(join(tempRepoPath, '.forge/analysis/latest.json'))).toBe(true);
+      expect(manifest.name).toBe('forge-ai-assist');
+      expect(manifest.bin).toEqual({ forge: './dist/cli.js' });
     });
   });
 });

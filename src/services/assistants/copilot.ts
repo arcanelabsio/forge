@@ -32,8 +32,7 @@ export class CopilotAdapter implements AssistantAdapter {
    * Gets the target path for installing a summonable entry for Copilot.
    */
   getInstallTarget(cwd: string, entry: SummonableEntry): string {
-    // Preserving existing behavior from Phase 3
-    return path.join(cwd, '.forge', 'assistants', 'copilot', 'agent.md');
+    return path.join(cwd, '.copilot', 'agents', `${entry.id}.agent.md`);
   }
 
   /**

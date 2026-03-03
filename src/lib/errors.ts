@@ -34,3 +34,35 @@ export class AnalysisRequiredError extends UserFacingError {
     this.name = "AnalysisRequiredError";
   }
 }
+
+export class UnsupportedGitHubRemoteError extends UserFacingError {
+  constructor(message = 'Forge could not derive a GitHub owner/repo from the current origin remote.') {
+    super(message);
+    this.name = 'UnsupportedGitHubRemoteError';
+  }
+}
+
+export class GitHubTokenRequiredError extends UserFacingError {
+  constructor(
+    message = 'Missing GitHub token. Export GH_TOKEN or GITHUB_TOKEN in your shell, then retry the discussions fetch.'
+  ) {
+    super(message);
+    this.name = 'GitHubTokenRequiredError';
+  }
+}
+
+export class GitHubDiscussionsFetchError extends UserFacingError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GitHubDiscussionsFetchError';
+  }
+}
+
+export class DiscussionArtifactsRequiredError extends UserFacingError {
+  constructor(
+    message = 'No discussion artifacts found. Fetch discussions first with Forge before running forge-discussion-analyzer.'
+  ) {
+    super(message);
+    this.name = 'DiscussionArtifactsRequiredError';
+  }
+}

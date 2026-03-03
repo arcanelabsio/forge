@@ -62,6 +62,18 @@ export const SidecarMetadataSchema = z.object({
     })).default([]),
   }).optional(),
 
+  discussions: z.object({
+    lastRunId: z.string().optional(),
+    history: z.array(z.object({
+      id: z.string(),
+      timestamp: z.string().datetime(),
+      repository: z.string(),
+      discussionCount: z.number(),
+      artifactPath: z.string(),
+      filterDescription: z.string().optional(),
+    })).default([]),
+  }).optional(),
+
   /**
    * Arbitrary history of Forge runs against this repository.
    */

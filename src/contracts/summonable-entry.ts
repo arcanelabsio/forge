@@ -17,6 +17,7 @@ export interface SummonableCommand {
   name: string;
   description: string;
   usage: string;
+  examples?: string[];
 }
 
 /**

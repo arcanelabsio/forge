@@ -1,5 +1,28 @@
 import { execa } from 'execa';
-import { RepositoryRequiredError } from '../lib/errors.js';
+import { GitHubRepositoryRef } from '../contracts/discussions.js';
+import { RepositoryRequiredError, UnsupportedGitHubRemoteError } from '../lib/errors.js';
+
+export function parseGitHubRepositoryRemote(remoteUrl: string): GitHubRepositoryRef | null {
+  const normalized = remoteUrl.trim();
+  const patterns = [
+    /^https:\/\/github\.com\/(?<owner>[^/]+)\/(?<repo>[^/]+?)(?:\.git)?\/?$/i,
+    /^git@github\.com:(?<owner>[^/]+)\/(?<repo>[^/]+?)(?:\.git)?$/i,
+    /^ssh:\/\/git@github\.com\/(?<owner>[^/]+)\/(?<repo>[^/]+?)(?:\.git)?\/?$/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern);
+    if (match?.groups?.owner && match.groups.repo) {
+      return {
+        owner: match.groups.owner,
+        name: match.groups.repo,
+        remoteUrl: normalized,
+      };
+    }
+  }
+
+  return null;
+}
 
 /**
  * Service for Git operations and repository state detection.
@@ -67,6 +90,23 @@ export class GitService {
     } catch {
       return undefined;
     }
+  }
+
+  async getGitHubRepository(): Promise<GitHubRepositoryRef> {
+    const remoteUrl = await this.getRemoteUrl();
+
+    if (!remoteUrl) {
+      throw new UnsupportedGitHubRemoteError('No origin remote was found for the current repository.');
+    }
+
+    const repository = parseGitHubRepositoryRemote(remoteUrl);
+    if (!repository) {
+      throw new UnsupportedGitHubRemoteError(
+        `Forge only supports GitHub remotes for discussions fetches. Current origin: ${remoteUrl}`
+      );
+    }
+
+    return repository;
   }
 
   /**

@@ -4,7 +4,7 @@
   "description": "Forge AI Assist CLI",
   "type": "module",
   "bin": {
-    "forge-ai-assist": "./dist/cli.js"
+    "forge": "./dist/cli.js"
   },
   "files": [
     "dist"
@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "smoke": "node dist/cli.js --help",
+    "smoke": "node dist/cli.js --assistants claude --yes",
     "test": "vitest run",
     "test:smoke": "vitest run tests/smoke",
     "test:coverage": "vitest run --coverage"

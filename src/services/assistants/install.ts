@@ -3,12 +3,17 @@ import path from 'node:path';
 import { assistantRegistry, AssistantAdapter } from './registry.js';
 import { AssistantId, AssistantOperationResult } from '../../contracts/assistants.js';
 import { SummonableEntry } from '../../contracts/summonable-entry.js';
+import { forgeSummonableEntries } from './summonables.js';
 
 /**
  * AssistantInstallService: Orchestrates the installation and update of 
  * AI assistant runtime entries across the supported assistant set.
  */
 export class AssistantInstallService {
+  getSupportedAssistantIds(): AssistantId[] {
+    return assistantRegistry.listCapabilities().map((capability) => capability.id);
+  }
+
   /**
    * Installs or updates all supported assistant entries for a given summonable entry.
    *
@@ -21,24 +26,41 @@ export class AssistantInstallService {
    * @returns Structured results for each assistant target
    */
   async installAll(cwd: string, entry: SummonableEntry): Promise<AssistantOperationResult[]> {
+    return this.installSelected(cwd, entry, this.getSupportedAssistantIds());
+  }
+
+  async installSelected(
+    cwd: string,
+    entry: SummonableEntry,
+    assistantIds: AssistantId[]
+  ): Promise<AssistantOperationResult[]> {
+    return this.installEntriesSelected(cwd, [entry], assistantIds);
+  }
+
+  async installDefaultSummonables(cwd: string, assistantIds: AssistantId[]): Promise<AssistantOperationResult[]> {
+    return this.installEntriesSelected(cwd, forgeSummonableEntries, assistantIds);
+  }
+
+  async installEntriesSelected(
+    cwd: string,
+    entries: SummonableEntry[],
+    assistantIds: AssistantId[]
+  ): Promise<AssistantOperationResult[]> {
     const results: AssistantOperationResult[] = [];
-    
-    // Get all supported capabilities
-    const capabilities = assistantRegistry.listCapabilities();
-    
-    for (const capability of capabilities) {
-      const adapter = assistantRegistry.get(capability.id);
+
+    for (const assistantId of assistantIds) {
+      const adapter = assistantRegistry.get(assistantId);
       if (!adapter) {
         results.push({
-          id: capability.id,
+          id: assistantId,
           status: 'failed',
-          message: `Adapter for assistant '${capability.id}' not found in registry.`,
+          message: `Adapter for assistant '${assistantId}' not found in registry.`,
         });
         continue;
       }
 
       try {
-        const result = await this.installOne(cwd, entry, adapter);
+        const result = await this.installMany(cwd, entries, adapter);
         results.push(result);
       } catch (error) {
         results.push({
@@ -52,14 +74,63 @@ export class AssistantInstallService {
     return results;
   }
 
-  /**
-   * Installs or updates a single assistant entry.
-   */
-  async installOne(
-    cwd: string, 
-    entry: SummonableEntry, 
+  async installMany(
+    cwd: string,
+    entries: SummonableEntry[],
     adapter: AssistantAdapter
   ): Promise<AssistantOperationResult> {
+    const availability = await adapter.checkAvailability();
+
+    if (!availability.isAvailable) {
+      return {
+        id: adapter.id,
+        status: 'no-op',
+        message: availability.reason || `Assistant ${adapter.name} is not available in the current environment.`,
+      };
+    }
+
+    let installedCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    for (const entry of entries) {
+      const result = await this.installOne(cwd, entry, adapter);
+      if (result.status === 'failed') {
+        return result;
+      }
+      if (result.status === 'success') {
+        if (result.message.includes('updated')) {
+          updatedCount += 1;
+        } else {
+          installedCount += 1;
+        }
+      } else if (result.status === 'skipped') {
+        skippedCount += 1;
+      }
+    }
+
+    if (installedCount === 0 && updatedCount === 0) {
+      return {
+        id: adapter.id,
+        status: 'skipped',
+        message: `${adapter.name} summonables are already up to date (${skippedCount} checked).`,
+      };
+    }
+
+    const segments = [
+      installedCount > 0 ? `${installedCount} installed` : null,
+      updatedCount > 0 ? `${updatedCount} updated` : null,
+      skippedCount > 0 ? `${skippedCount} unchanged` : null,
+    ].filter(Boolean);
+
+    return {
+      id: adapter.id,
+      status: 'success',
+      message: `${adapter.name} summonables ready (${segments.join(', ')}).`,
+    };
+  }
+
+  async installOne(cwd: string, entry: SummonableEntry, adapter: AssistantAdapter): Promise<AssistantOperationResult> {
     const availability = await adapter.checkAvailability();
     
     if (!availability.isAvailable) {

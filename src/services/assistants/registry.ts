@@ -58,6 +58,10 @@ export class AssistantRegistry {
     }));
   }
 
+  listAdapters(): AssistantAdapter[] {
+    return Array.from(this.adapters.values());
+  }
+
   /**
    * Checks availability for all registered assistants.
    */

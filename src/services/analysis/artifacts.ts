@@ -25,16 +25,31 @@ export interface AnalysisPaths {
   latest: string;
 }
 
+export interface SidecarRunPaths {
+  base: string;
+  runs: string;
+  latest: string;
+}
+
+export function deriveSidecarRunPaths(
+  context: SidecarContext,
+  baseSubdir: string,
+  runsSubdir: string,
+  latestPointer: string
+): SidecarRunPaths {
+  const base = path.join(context.sidecarPath, baseSubdir);
+  return {
+    base,
+    runs: path.join(base, runsSubdir),
+    latest: path.join(base, latestPointer),
+  };
+}
+
 /**
  * Derives the analysis paths from the sidecar context.
  */
 export function deriveAnalysisPaths(context: SidecarContext): AnalysisPaths {
-  const base = path.join(context.sidecarPath, ANALYSIS_SUBDIR);
-  return {
-    base,
-    runs: path.join(base, RUNS_SUBDIR),
-    latest: path.join(base, LATEST_RUN_POINTER),
-  };
+  return deriveSidecarRunPaths(context, ANALYSIS_SUBDIR, RUNS_SUBDIR, LATEST_RUN_POINTER);
 }
 
 /**

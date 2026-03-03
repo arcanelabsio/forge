@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { git } from '../../../src/services/git.js';
+import { git, parseGitHubRepositoryRemote } from '../../../src/services/git.js';
 import { execa } from 'execa';
 import { RepositoryRequiredError } from '../../../src/lib/errors.js';
 
@@ -116,6 +116,40 @@ describe('GitService', () => {
       const url = await git.getRemoteUrl();
 
       expect(url).toBeUndefined();
+    });
+  });
+
+  describe('parseGitHubRepositoryRemote', () => {
+    it('parses HTTPS GitHub remotes', () => {
+      expect(parseGitHubRepositoryRemote('https://github.com/user/repo.git')).toEqual({
+        owner: 'user',
+        name: 'repo',
+        remoteUrl: 'https://github.com/user/repo.git',
+      });
+    });
+
+    it('parses SSH GitHub remotes', () => {
+      expect(parseGitHubRepositoryRemote('git@github.com:user/repo.git')).toEqual({
+        owner: 'user',
+        name: 'repo',
+        remoteUrl: 'git@github.com:user/repo.git',
+      });
+    });
+
+    it('returns null for unsupported remotes', () => {
+      expect(parseGitHubRepositoryRemote('https://gitlab.com/user/repo.git')).toBeNull();
+    });
+  });
+
+  describe('getGitHubRepository', () => {
+    it('returns the parsed GitHub repository from origin', async () => {
+      vi.mocked(execa).mockResolvedValue({ stdout: 'https://github.com/user/repo.git\n' } as any);
+
+      await expect(git.getGitHubRepository()).resolves.toEqual({
+        owner: 'user',
+        name: 'repo',
+        remoteUrl: 'https://github.com/user/repo.git',
+      });
     });
   });
 
