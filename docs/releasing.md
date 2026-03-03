@@ -1,95 +1,29 @@
 # Releasing Forge
 
-Forge releases currently run from the maintainer's local machine. There is no GitHub Actions publishing flow in Phase 9.
+## Quick Steps
 
-## Prerequisites
-
-- Node 22 or newer
-- `NPM_TOKEN` exported for non-interactive release, or local npm authentication available via `npm login`
-- A clean git worktree, unless you intentionally override the check
-- Release-ready package version already set in `package.json`
-
-## Recommended Release Sequence
-
-One-command release:
-
-```bash
-make release v1.0.0
-```
-
-This flow will:
-
-- normalize the version (`v1.0.0` becomes `1.0.0`)
-- update `package.json`
-- verify git status
-- prefer `NPM_TOKEN` for npm authentication
-- start `npm login` automatically only when `NPM_TOKEN` is missing and npm auth is not already configured
-- run build, test, and pack checks
-- publish the verified tarball to npm
-
-Dry-run release validation:
-
-```bash
-make release-check v1.0.0
-```
-
-Equivalent direct command:
-
-```bash
-npm run release:local -- v1.0.0 --publish
-```
-
-Recommended non-interactive setup:
+1. Publish npm:
 
 ```bash
 export NPM_TOKEN=your_npm_token_here
 make release v1.0.0
 ```
 
-After npm publish, create the matching git tag and GitHub Release note:
+2. Push the matching tag and GitHub Release:
 
 ```bash
 make release-tag v1.0.0
 ```
 
-## Optional Flags
-
-- `make release v1.0.0 next --tag next` is not supported; use the direct npm command when you need extra flags
-- `npm run release:local -- v1.0.0 --publish --tag next` publishes under a non-`latest` dist-tag
-- `--otp 123456` if your npm account requires one-time passwords
-- `--login never` disables automatic `npm login`
-- `--login always` forces a fresh `npm login` before validation
-- `--allow-dirty` only if you intentionally want to bypass the clean-worktree check
-- `--keep-tarball` to retain the packed `.tgz` artifact after the command exits
-- `--skip-version-bump` keeps the current `package.json` version unchanged
-
-## After Publish
-
-Recommended follow-up steps:
-
-1. Run `make release-tag v1.0.0` for the published version
-2. Verify public install and bundled Copilot runtime:
+3. Verify the public install:
 
 ```bash
 npx forge-ai-assist@latest
-ls ~/.copilot/agents
-ls ~/.copilot/forge/bin
-ls ~/.copilot/forge/node_modules
-node "$HOME/.copilot/forge/bin/forge.mjs" --version
+node "$HOME/.copilot/forge/bin/forge.mjs" --help
 ```
 
-Expected post-install state:
+Expected result:
 
 - `~/.copilot/agents/forge-discussion-analyzer.agent.md` exists
-- `~/.copilot/forge/node_modules` exists and is populated
-- `node "$HOME/.copilot/forge/bin/forge.mjs" --help` works immediately
-- no manual `npm install` is required inside `~/.copilot/forge`
-- the installed Copilot agent routes discussion analysis through Forge instead of raw `gh api graphql`
-
-## Failure Handling
-
-- If `NPM_TOKEN` is unset and `npm whoami` fails, the release script will try `npm login` unless you passed `--login never`
-- If tests fail, do not publish; fix the issue and rerun the release command
-- If publish succeeds but local cleanup fails, the release is already live; remove the tarball manually and proceed with tag/release-note cleanup
-- If a target machine has only `~/.copilot/ide/*.lock`, rerunning `npx forge-ai-assist@latest` should still bootstrap `~/.copilot/agents` and `~/.copilot/forge`
-- If you still see Copilot attempting `npm install` or raw `gh api graphql`, reinstall Forge and inspect the generated `~/.copilot/agents/forge-discussion-analyzer.agent.md` plus `~/.copilot/forge/node_modules`
+- `~/.copilot/forge/node_modules` exists
+- no manual `npm install` is needed inside `~/.copilot/forge`
