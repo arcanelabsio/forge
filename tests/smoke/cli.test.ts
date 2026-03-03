@@ -250,6 +250,7 @@ describe('CLI Smoke Tests - Installer Flow', () => {
     it('installs and runs from the packed tarball', async () => {
       const tarballPath = await packArtifact();
       const installPath = await mkdtemp(join(tmpdir(), 'forge-packed-install-'));
+      const packedHomePath = await mkdtemp(join(tmpdir(), 'forge-packed-home-'));
 
       try {
         await execa('npm', ['init', '-y'], { cwd: installPath });
@@ -261,8 +262,23 @@ describe('CLI Smoke Tests - Installer Flow', () => {
         expect(exitCode).toBe(0);
         expect(stdout).toContain('Usage: forge');
         expect(stdout).toContain('Install the Forge Copilot runtime into ~/.copilot');
+
+        const installRun = await execa(forgeBin, [], {
+          cwd: installPath,
+          timeout: 20000,
+          env: {
+            ...process.env,
+            HOME: packedHomePath,
+          },
+        });
+
+        expect(installRun.exitCode).toBe(0);
+        expect(installRun.stdout).toContain(`Installing Forge Copilot runtime to ${join(packedHomePath, '.copilot')}`);
+        expect(await fileExists(join(packedHomePath, '.copilot/forge/node_modules'))).toBe(true);
+        expect(await fileExists(join(packedHomePath, '.copilot/agents/forge-discussion-analyzer.agent.md'))).toBe(true);
       } finally {
         await rm(installPath, { recursive: true, force: true });
+        await rm(packedHomePath, { recursive: true, force: true });
         await rm(tarballPath, { force: true });
       }
     }, 20000);

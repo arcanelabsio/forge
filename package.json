@@ -1,6 +1,6 @@
 {
   "name": "forge-ai-assist",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Install and run Forge Copilot summonables for GitHub discussion analysis.",
   "keywords": [
     "copilot",
@@ -24,6 +24,11 @@
   },
   "files": [
     "dist"
+  ],
+  "bundledDependencies": [
+    "commander",
+    "execa",
+    "zod"
   ],
   "publishConfig": {
     "access": "public"
