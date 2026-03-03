@@ -68,7 +68,7 @@ describe('CLI Smoke Tests - Installer Flow', () => {
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain(`Installing Forge Copilot runtime to ${globalCopilotPath}`);
-      expect(stdout).toContain(`Global install root: ${globalCopilotPath}`);
+      expect(stdout).toContain('✅ copilot');
       expect(await fileExists(join(globalCopilotPath, 'agents/forge-discussion-analyzer.agent.md'))).toBe(true);
       expect(await fileExists(join(globalCopilotPath, 'forge/bin/forge.mjs'))).toBe(true);
       expect(await fileExists(join(globalCopilotPath, 'forge/dist/cli.js'))).toBe(true);
@@ -103,6 +103,24 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       expect(copilotAnalyzer).toContain('node "$HOME/.copilot/forge/bin/forge.mjs" --run forge-discussion-analyzer --question');
       expect(copilotAnalyzer).toContain('Ask for approval once for the Forge command');
       expect(copilotAnalyzer).toContain('Do not run npm install, repair Forge dependencies, or switch to raw gh api graphql');
+      expect(copilotAnalyzer).toContain('<!-- BEGIN FORGE MANAGED BLOCK -->');
+      expect(copilotAnalyzer).toContain('<!-- BEGIN USER CUSTOMIZATIONS -->');
+    });
+
+    it('preserves user customizations inside the Copilot agent file on reinstall', async () => {
+      await runCLI([], tempRepoPath);
+      const agentPath = join(tempHomePath, '.copilot/agents/forge-discussion-analyzer.agent.md');
+      const customized = (await readFile(agentPath, 'utf8')).replace(
+        'Add team- or user-specific Copilot instructions here. Forge preserves this section across updates.',
+        'Team custom instruction: escalate billing issues to the support lead.',
+      );
+      await writeFile(agentPath, customized, 'utf8');
+
+      await runCLI([], tempRepoPath);
+
+      const reloaded = await readFile(agentPath, 'utf8');
+      expect(reloaded).toContain('Team custom instruction: escalate billing issues to the support lead.');
+      expect(reloaded).toContain('<!-- BEGIN FORGE MANAGED BLOCK -->');
     });
 
     it('writes installer metadata for reruns and bundled runtime state', async () => {
@@ -155,6 +173,18 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       expect(exitCode).toBe(0);
       expect(stdout).toContain('Usage: forge');
       expect(stdout).toContain('Install the Forge Copilot runtime into ~/.copilot');
+    });
+
+    it('shows installer detail lines only in verbose mode', async () => {
+      const defaultRun = await runCLI([]);
+      await rm(tempHomePath, { recursive: true, force: true });
+      tempHomePath = await mkdtemp(join(tmpdir(), 'forge-home-test-'));
+      const verboseRun = await runCLI(['--verbose']);
+
+      expect(defaultRun.stdout).not.toContain('installed bundled runtime to');
+      expect(defaultRun.stdout).not.toContain('updated manifest');
+      expect(verboseRun.stdout).toContain('installed bundled runtime to');
+      expect(verboseRun.stdout).toContain('bundled tool entry:');
     });
   });
 

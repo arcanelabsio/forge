@@ -8,6 +8,12 @@ Forge installs a GitHub Copilot discussion-analysis runtime under `~/.copilot`.
 npx forge-ai-assist@latest
 ```
 
+If npm keeps serving a stale cached release, force an online refresh:
+
+```bash
+npm_config_prefer_online=true npx forge-ai-assist@latest
+```
+
 ## Use
 
 In Copilot:

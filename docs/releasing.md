@@ -19,6 +19,7 @@ make release-tag v1.0.0
 
 ```bash
 npx forge-ai-assist@latest
+npm_config_prefer_online=true npx forge-ai-assist@latest
 node "$HOME/.copilot/forge/bin/forge.mjs" --help
 ```
 
