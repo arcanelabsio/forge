@@ -7,17 +7,17 @@
 
 ### Installation And Invocation
 
-- [ ] **INVK-01**: User can run Forge through `npx forge-ai-assist@latest`
+- [x] **INVK-01**: User can run Forge through `npx forge-ai-assist@latest`
 - [ ] **INVK-02**: Forge can install or update summonable assistant entries in assistant-owned runtime locations from one managed source
-- [ ] **INVK-03**: Forge can make a GitHub Copilot agent available through `/agent` as the first end-to-end supported workflow
-- [ ] **INVK-04**: Forge exits with a clear message when a repository-analysis flow is invoked outside a Git repository
+- [x] **INVK-03**: Forge can make a GitHub Copilot agent available through `/agent` as the first end-to-end supported workflow
+- [x] **INVK-04**: Forge exits with a clear message when a repository-analysis flow is invoked outside a Git repository
 
 ### Sidecar Workspace
 
-- [ ] **SIDE-01**: Forge writes all managed artifacts into a single Forge-owned directory that can be ignored by the host repository
-- [ ] **SIDE-02**: Forge does not modify user repository source files during v1 flows
-- [ ] **SIDE-03**: Forge can rerun in the same repository without duplicating or corrupting its managed sidecar artifacts
-- [ ] **SIDE-04**: Forge records enough metadata in the sidecar directory to understand prior runs and generated outputs
+- [x] **SIDE-01**: Forge writes all managed artifacts into a single Forge-owned directory that can be ignored by the host repository
+- [x] **SIDE-02**: Forge does not modify user repository source files during v1 flows
+- [x] **SIDE-03**: Forge can rerun in the same repository without duplicating or corrupting its managed sidecar artifacts
+- [x] **SIDE-04**: Forge records enough metadata in the sidecar directory to understand prior runs and generated outputs
 
 ### Repository Analysis
 
@@ -28,10 +28,10 @@
 
 ### Planning Outputs
 
-- [ ] **PLAN-01**: Forge can generate action plans for users or maintainers based on repository analysis
-- [ ] **PLAN-02**: Action plans are specific, reviewable, and do not assume Forge will apply code changes automatically
-- [ ] **PLAN-03**: Action plans can be associated with a requested task, assistant context, or workflow entrypoint
-- [ ] **PLAN-04**: Forge can preserve prior plan outputs in the sidecar directory for later follow-up
+- [x] **PLAN-01**: Forge can generate action plans for users or maintainers based on repository analysis
+- [x] **PLAN-02**: Action plans are specific, reviewable, and do not assume Forge will apply code changes automatically
+- [x] **PLAN-03**: Action plans can be associated with a requested task, assistant context, or workflow entrypoint
+- [x] **PLAN-04**: Forge can preserve prior plan outputs in the sidecar directory for later follow-up
 
 ### Assistant Support
 
@@ -43,8 +43,8 @@
 
 ### Delivery Foundations
 
-- [ ] **DELV-01**: Project ships as an npm package that exposes a CLI executable for `npx forge-ai-assist@latest`
-- [ ] **DELV-02**: Project includes automated tests for Git-repo detection, sidecar writes, and rerun idempotency
+- [x] **DELV-01**: Project ships as an npm package that exposes a CLI executable for `npx forge-ai-assist@latest`
+- [x] **DELV-02**: Project includes automated tests for Git-repo detection, sidecar writes, and rerun idempotency
 - [ ] **DELV-03**: Project includes automated tests for analysis output generation and plan generation
 - [ ] **DELV-04**: Project includes smoke tests that validate sidecar-only behavior against temporary Git repositories
 
@@ -69,29 +69,29 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INVK-01 | Phase 1 | Pending |
+| INVK-01 | Phase 6 | Complete |
 | INVK-02 | Phase 4 | Pending |
-| INVK-03 | Phase 3 | Pending |
-| INVK-04 | Phase 1 | Pending |
-| SIDE-01 | Phase 1 | Pending |
-| SIDE-02 | Phase 1 | Pending |
-| SIDE-03 | Phase 1 | Pending |
-| SIDE-04 | Phase 1 | Pending |
+| INVK-03 | Phase 3 | Complete |
+| INVK-04 | Phase 6 | Complete |
+| SIDE-01 | Phase 6 | Complete |
+| SIDE-02 | Phase 6 | Complete |
+| SIDE-03 | Phase 6 | Complete |
+| SIDE-04 | Phase 6 | Complete |
 | ANLY-01 | Phase 2 | Pending |
 | ANLY-02 | Phase 2 | Pending |
 | ANLY-03 | Phase 2 | Pending |
 | ANLY-04 | Phase 2 | Pending |
-| PLAN-01 | Phase 3 | Pending |
-| PLAN-02 | Phase 3 | Pending |
-| PLAN-03 | Phase 3 | Pending |
-| PLAN-04 | Phase 3 | Pending |
+| PLAN-01 | Phase 3 | Complete |
+| PLAN-02 | Phase 3 | Complete |
+| PLAN-03 | Phase 3 | Complete |
+| PLAN-04 | Phase 3 | Complete |
 | ASST-01 | Phase 4 | Pending |
 | ASST-02 | Phase 4 | Pending |
 | ASST-03 | Phase 4 | Pending |
 | ASST-04 | Phase 4 | Pending |
 | ASST-05 | Phase 4 | Pending |
-| DELV-01 | Phase 1 | Pending |
-| DELV-02 | Phase 5 | Pending |
+| DELV-01 | Phase 6 | Complete |
+| DELV-02 | Phase 5 | Complete |
 | DELV-03 | Phase 5 | Pending |
 | DELV-04 | Phase 5 | Pending |
 
