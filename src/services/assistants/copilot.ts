@@ -65,22 +65,32 @@ export class CopilotAdapter implements AssistantAdapter {
 export const copilotAdapter = new CopilotAdapter();
 
 function renderCopilotAgent(entry: SummonableEntry): string {
-  const description = sanitizeYamlString(entry.purpose);
-  const name = sanitizeYamlString(entry.id);
+  const description = sanitizePlainScalar(entry.purpose);
+  const name = sanitizePlainScalar(entry.id);
   const body = entryRenderer.renderToMarkdown(entry);
 
   return [
     '---',
     `name: ${name}`,
     `description: ${description}`,
-    'tools: ["read", "search", "edit", "execute"]',
-    'target: github-copilot',
+    'tools:',
+    '  - read_file',
+    '  - run_in_terminal',
+    '  - fetch_webpage',
+    '  - grep_search',
+    '  - file_search',
+    '  - semantic_search',
+    'color: blue',
     '---',
     '',
     body,
   ].join('\n');
 }
 
-function sanitizeYamlString(value: string): string {
-  return JSON.stringify(value.trim());
+function sanitizePlainScalar(value: string): string {
+  return value
+    .replace(/\r?\n+/g, ' ')
+    .replace(/:\s/g, ' - ')
+    .replace(/^["']+|["']+$/g, '')
+    .trim();
 }

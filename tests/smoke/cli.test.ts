@@ -75,10 +75,10 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       if (!copilotAnalyzer) {
         throw new Error('missing copilot analyzer asset');
       }
-      expect(copilotAnalyzer).toContain('---\nname: "forge-discussion-analyzer"');
-      expect(copilotAnalyzer).toContain('description:');
-      expect(copilotAnalyzer).toContain('tools: ["read", "search", "edit", "execute"]');
-      expect(copilotAnalyzer).toContain('target: github-copilot');
+      expect(copilotAnalyzer).toContain('---\nname: forge-discussion-analyzer');
+      expect(copilotAnalyzer).toContain('description: Analyze GitHub Discussions');
+      expect(copilotAnalyzer).toContain('tools:\n  - read_file');
+      expect(copilotAnalyzer).toContain('color: blue');
       expect(copilotAnalyzer).toContain('Forge Discussion Analyzer');
     });
   });
