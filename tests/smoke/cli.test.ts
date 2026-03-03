@@ -100,7 +100,7 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       expect(copilotAnalyzer).toContain('tools:\n  - read_file');
       expect(copilotAnalyzer).toContain('color: blue');
       expect(copilotAnalyzer).toContain('Forge Discussion Analyzer');
-      expect(copilotAnalyzer).toContain('node "$HOME/.copilot/forge/bin/forge.mjs" --run-summonable forge-discussion-analyzer');
+      expect(copilotAnalyzer).toContain('node "$HOME/.copilot/forge/bin/forge.mjs" --run forge-discussion-analyzer --question');
       expect(copilotAnalyzer).toContain('Ask for approval once for the Forge command');
       expect(copilotAnalyzer).toContain('Do not run npm install, repair Forge dependencies, or switch to raw gh api graphql');
     });
@@ -164,10 +164,11 @@ describe('CLI Smoke Tests - Installer Flow', () => {
 
       expect(stdout).toContain('Usage: forge');
       expect(stdout).toContain('Install the Forge Copilot runtime into ~/.copilot');
+      expect(stdout).toContain('--run <analyzer>');
       expect(stdout).not.toContain('--assistants <ids>');
       expect(stdout).not.toContain('--yes');
       expect(stdout).not.toContain('bootstrap');
-      expect(stdout).not.toContain('analyze');
+      expect(stdout).not.toContain('forge analyze');
       expect(stdout).not.toContain('plan');
       expect(stdout).not.toContain('install-assistants');
       expect(stdout).not.toContain('install-copilot');
@@ -218,7 +219,7 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       );
 
       const { exitCode, stdout } = await runCLI([
-        '--run-summonable',
+        '--run',
         'forge-discussion-analyzer',
         '--question',
         'What recurring patterns are visible in support discussions?',

@@ -80,6 +80,7 @@ export interface PreparedDiscussionRecord {
   title: string;
   url: string;
   category: string;
+  createdAt: string;
   status: DiscussionStatus;
   kind: DiscussionKind;
   issue: string;

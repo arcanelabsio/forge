@@ -196,6 +196,110 @@ describe('Discussions services', () => {
     expect(result.discussions[0]?.title).toBe('Filterable fetch');
   });
 
+  it('paginates across multiple GitHub discussion pages', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              discussionCategories: {
+                nodes: [{ id: 'cat1', name: 'Ideas', slug: 'ideas' }],
+              },
+              discussions: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: null,
+                },
+                nodes: [],
+              },
+            },
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              discussionCategories: {
+                nodes: [{ id: 'cat1', name: 'Ideas', slug: 'ideas' }],
+              },
+              discussions: {
+                pageInfo: {
+                  hasNextPage: true,
+                  endCursor: 'cursor-1',
+                },
+                nodes: Array.from({ length: 100 }, (_, index) => ({
+                  id: `D_${index + 1}`,
+                  number: index + 1,
+                  title: `Discussion ${index + 1}`,
+                  url: `https://github.com/ajitgunturi/forge/discussions/${index + 1}`,
+                  createdAt: '2026-03-03T08:00:00.000Z',
+                  updatedAt: '2026-03-03T09:00:00.000Z',
+                  answerChosenAt: null,
+                  bodyText: 'Paged fetch test.',
+                  upvoteCount: 0,
+                  author: { login: 'ajitg' },
+                  category: { id: 'cat1', name: 'Ideas', slug: 'ideas' },
+                  comments: { totalCount: 2 },
+                })),
+              },
+            },
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              discussionCategories: {
+                nodes: [{ id: 'cat1', name: 'Ideas', slug: 'ideas' }],
+              },
+              discussions: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: null,
+                },
+                nodes: Array.from({ length: 20 }, (_, index) => ({
+                  id: `D_${index + 101}`,
+                  number: index + 101,
+                  title: `Discussion ${index + 101}`,
+                  url: `https://github.com/ajitgunturi/forge/discussions/${index + 101}`,
+                  createdAt: '2026-03-03T08:00:00.000Z',
+                  updatedAt: '2026-03-03T09:00:00.000Z',
+                  answerChosenAt: null,
+                  bodyText: 'Paged fetch test.',
+                  upvoteCount: 0,
+                  author: { login: 'ajitg' },
+                  category: { id: 'cat1', name: 'Ideas', slug: 'ideas' },
+                  comments: { totalCount: 2 },
+                })),
+              },
+            },
+          },
+        }),
+      });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchGitHubDiscussions({
+      repository: {
+        owner: 'ajitgunturi',
+        name: 'forge',
+        remoteUrl: 'https://github.com/ajitgunturi/forge.git',
+      },
+      token: 'token',
+      filters: normalizeDiscussionFilters({
+        limit: 120,
+      }),
+    });
+
+    expect(result.discussions).toHaveLength(120);
+    expect(result.pageInfo.fetchedPages).toBe(2);
+  });
+
   it('prepares compact discussion digests from raw fetch artifacts', () => {
     const digest = buildPreparedDiscussionDigest({
       version: '1.0',
@@ -233,6 +337,7 @@ describe('Discussions services', () => {
 
     expect(digest.records[0]?.status).toBe('resolved');
     expect(digest.records[0]?.issue).toContain('Install fails');
+    expect(digest.records[0]?.createdAt).toBe('2026-03-03T08:00:00.000Z');
   });
 
   it('runs forge-discussion-analyzer from prepared sidecar artifacts', async () => {
@@ -302,5 +407,124 @@ describe('Discussions services', () => {
       'utf8',
     );
     expect(latestAnswerMarkdown).toContain('GitHub Discussions Digest');
+  });
+
+  it('reports count-style questions against refreshed discussion data', async () => {
+    const context = deriveSidecarContext(tempDir);
+    const run = {
+      version: '1.0' as const,
+      id: '2026-03-03T10-00-00-000Z',
+      timestamp: '2026-03-03T10:00:00.000Z',
+      repository: {
+        owner: 'ajitgunturi',
+        name: 'forge',
+        remoteUrl: 'https://github.com/ajitgunturi/forge.git',
+      },
+      filters: normalizeDiscussionFilters({ limit: 500 }),
+      pageInfo: {
+        hasNextPage: false,
+        endCursor: null,
+        fetchedPages: 1,
+      },
+      discussionCount: 2,
+      discussions: [
+        {
+          id: 'D_4',
+          number: 201,
+          title: 'Created in 2026',
+          url: 'https://github.com/ajitgunturi/forge/discussions/201',
+          createdAt: '2026-01-02T08:00:00.000Z',
+          updatedAt: '2026-03-03T09:00:00.000Z',
+          answerChosenAt: null,
+          author: 'ajitg',
+          category: { id: 'cat1', name: 'Ideas', slug: 'ideas' },
+          bodyText: 'Count me.',
+          commentsCount: 2,
+          upvoteCount: 1,
+        },
+        {
+          id: 'D_5',
+          number: 202,
+          title: 'Created in 2025',
+          url: 'https://github.com/ajitgunturi/forge/discussions/202',
+          createdAt: '2025-12-31T08:00:00.000Z',
+          updatedAt: '2026-03-03T09:00:00.000Z',
+          answerChosenAt: null,
+          author: 'ajitg',
+          category: { id: 'cat1', name: 'Ideas', slug: 'ideas' },
+          bodyText: 'Do not count me.',
+          commentsCount: 2,
+          upvoteCount: 1,
+        },
+      ],
+    };
+
+    await writeMetadata(context.metadataPath, createNewMetadata());
+    await persistDiscussionRun(context, run);
+    await persistPreparedDiscussionDigest(tempDir, run);
+
+    const answer = await runDiscussionAnalyzer({
+      cwd: tempDir,
+      question: 'count discussions created since 2026-01-01',
+    });
+
+    expect(answer).toContain('## Count Summary');
+    expect(answer).toContain('**Counted Discussions:** 1');
+    expect(answer).toContain('createdAt filtered by since 2026-01-01');
+  });
+
+  it('fails fast when the question asks for issues instead of discussions', async () => {
+    const context = deriveSidecarContext(tempDir);
+    const run = {
+      version: '1.0' as const,
+      id: '2026-03-03T10-00-00-000Z',
+      timestamp: '2026-03-03T10:00:00.000Z',
+      repository: {
+        owner: 'ajitgunturi',
+        name: 'forge',
+        remoteUrl: 'https://github.com/ajitgunturi/forge.git',
+      },
+      filters: normalizeDiscussionFilters({ limit: 50 }),
+      pageInfo: {
+        hasNextPage: false,
+        endCursor: null,
+        fetchedPages: 1,
+      },
+      discussionCount: 1,
+      discussions: [
+        {
+          id: 'D_6',
+          number: 301,
+          title: 'Discussion scope test',
+          url: 'https://github.com/ajitgunturi/forge/discussions/301',
+          createdAt: '2026-03-01T08:00:00.000Z',
+          updatedAt: '2026-03-03T09:00:00.000Z',
+          answerChosenAt: null,
+          author: 'ajitg',
+          category: { id: 'cat1', name: 'Ideas', slug: 'ideas' },
+          bodyText: 'Discussion for scope guard test.',
+          commentsCount: 2,
+          upvoteCount: 1,
+        },
+      ],
+    };
+
+    await writeMetadata(context.metadataPath, createNewMetadata());
+    await persistDiscussionRun(context, run);
+    await persistPreparedDiscussionDigest(tempDir, run);
+
+    await expect(
+      runDiscussionAnalyzer({
+        cwd: tempDir,
+        question: 'show me issues created in the last week',
+      }),
+    ).rejects.toThrow(/works with GitHub Discussions only/);
+
+    await expect(
+      runDiscussionAnalyzer({
+        cwd: tempDir,
+        question: 'show me issues created in the last week',
+      }),
+    ).rejects.toThrow(/Did you mean: "show me discussions created in the last week"/);
   });
 });

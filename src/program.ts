@@ -1,4 +1,4 @@
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { installAssistantsCommand } from "./commands/install-assistants.js";
@@ -14,9 +14,11 @@ type PackageManifest = {
 type ProgramOptions = {
   cwd: string;
   fetchDiscussions?: boolean;
+  run?: string;
   runSummonable?: string;
   question?: string;
   refreshAnalysis?: boolean;
+  forceRefresh?: boolean;
   githubToken?: string;
   when?: string;
   after?: string;
@@ -26,6 +28,7 @@ type ProgramOptions = {
 };
 
 const EXECUTABLE_NAME = "forge";
+const DEFAULT_ANALYZER_ID = "forge-discussion-analyzer";
 
 async function readPackageManifest(): Promise<PackageManifest> {
   const manifestUrl = new URL("../package.json", import.meta.url);
@@ -45,15 +48,17 @@ export async function createProgram(): Promise<Command> {
     .version(manifest.version ?? "0.0.0", "-v, --version", "output the current version")
     .option("--cwd <path>", "The working directory to run the command in.", process.cwd())
     .option("--fetch-discussions", "Fetch GitHub Discussions for the current repository into .forge/discussions.")
-    .option("--run-summonable <id>", "Run a Forge-managed summonable backend directly.")
+    .option("--run <analyzer>", "Run a Forge-managed analyzer.")
     .option("--question <text>", "Question or request for Forge-managed summonable execution.")
     .option("--refresh-analysis", "Rebuild compact discussion-analysis artifacts before answering.")
+    .option("--force-refresh", "Refetch GitHub Discussions before answering and rebuild the prepared analysis digest.")
     .option("--github-token <token>", "Explicit GitHub token override for discussions fetches.")
     .option("--when <window>", "Relative discussions window: today, yesterday, or last-week.")
     .option("--after <date>", "Only include discussions updated on or after this date.")
     .option("--before <date>", "Only include discussions updated on or before this date.")
     .option("--category <name>", "Filter discussions by GitHub discussion category name or slug.")
-    .option("--discussion-limit <number>", "Maximum number of discussions to persist (1-100).", "25")
+    .option("--discussion-limit <number>", "Maximum number of discussions to persist (1-5000).", "500")
+    .addOption(new Option("--run-summonable <id>", "Run a Forge-managed summonable backend directly.").hideHelp())
     .hook("preAction", (thisCommand) => {
       const options = thisCommand.opts();
       if (options.cwd && options.cwd !== process.cwd()) {
@@ -63,11 +68,23 @@ export async function createProgram(): Promise<Command> {
     .showHelpAfterError("(run with --help for usage)");
 
   program.action(async (options: ProgramOptions) => {
-    if (options.runSummonable === 'forge-discussion-analyzer') {
+    const requestedAnalyzer = options.run ?? options.runSummonable;
+
+    if (requestedAnalyzer) {
+      if (requestedAnalyzer !== DEFAULT_ANALYZER_ID) {
+        throw new Error(`Unknown analyzer "${requestedAnalyzer}". The available analyzer is ${DEFAULT_ANALYZER_ID}.`);
+      }
+
       const answer = await runDiscussionAnalyzer({
         cwd: options.cwd,
         question: options.question ?? '',
-        refresh: options.refreshAnalysis,
+        refresh: options.refreshAnalysis || options.forceRefresh,
+        token: options.githubToken,
+        when: options.when,
+        after: options.after,
+        before: options.before,
+        category: options.category,
+        limit: Number.parseInt(options.discussionLimit ?? "500", 10),
       });
       console.log(answer);
       return;

@@ -67,7 +67,7 @@ Forge's discussions workflows require either `GH_TOKEN` or `GITHUB_TOKEN`:
 ```bash
 export GH_TOKEN="$(gh auth token)"
 node "$HOME/.copilot/forge/bin/forge.mjs" --fetch-discussions --when today
-node "$HOME/.copilot/forge/bin/forge.mjs" --run-summonable forge-discussion-analyzer --question "What recurring issues show up this week?"
+node "$HOME/.copilot/forge/bin/forge.mjs" --run forge-discussion-analyzer --question "What recurring issues show up this week?"
 ```
 
 In Copilot, `forge-discussion-analyzer` should route the request through Forge itself. The expected behavior is one approval for the Forge command path, then Forge handles fetch and analysis. It should not repair the bundled runtime or fall back to raw `gh api graphql` when Forge is available.

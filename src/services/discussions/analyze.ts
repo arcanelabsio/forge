@@ -1,19 +1,28 @@
 import path from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { PreparedDiscussionDigest, DiscussionAnalysisTrace } from '../../contracts/discussions.js';
-import { DiscussionArtifactsRequiredError } from '../../lib/errors.js';
+import { DiscussionArtifactsRequiredError, DiscussionsOnlyAnalyzerError } from '../../lib/errors.js';
 import { loadLatestPreparedDiscussionDigest, prepareLatestDiscussionDigest } from './prepare.js';
 import { deriveSidecarContext } from '../sidecar.js';
+import { runDiscussionFetch } from './run.js';
 
 export interface RunDiscussionAnalyzerOptions {
   cwd: string;
   question: string;
   refresh?: boolean;
+  token?: string;
+  when?: string;
+  after?: string;
+  before?: string;
+  category?: string;
+  limit?: number;
 }
+
+const DEFAULT_ANALYZER_REFRESH_LIMIT = 1000;
 
 export async function runDiscussionAnalyzer(options: RunDiscussionAnalyzerOptions): Promise<string> {
   const digest = options.refresh
-    ? await prepareLatestDiscussionDigest(options.cwd)
+    ? await refreshAndPrepareDigest(options)
     : (await loadOrPrepareDigest(options.cwd));
 
   const answer = renderAnswer(digest, options.question);
@@ -35,22 +44,35 @@ function renderAnswer(digest: PreparedDiscussionDigest, question: string): strin
   if (!normalizedQuestion) {
     throw new DiscussionArtifactsRequiredError('A question is required when running forge-discussion-analyzer.');
   }
+  assertDiscussionScopedQuestion(question, normalizedQuestion);
 
+  const countSummary = deriveCountSummary(digest, question, normalizedQuestion);
   const includePatterns = shouldIncludePatternSection(normalizedQuestion);
   const includeEffectiveness = shouldIncludeEffectivenessSection(normalizedQuestion);
-  const records = filterRelevantRecords(digest, normalizedQuestion).slice(0, 8);
+  const records = (countSummary?.records ?? filterRelevantRecords(digest, normalizedQuestion)).slice(0, 8);
 
   const lines: string[] = [
     `# GitHub Discussions Digest: ${digest.repository.owner}/${digest.repository.name}`,
     '',
     `**Question:** ${question}  `,
     `**Source Run:** \`${digest.sourceRunId}\`  `,
+    `**Data Prepared:** ${digest.timestamp}  `,
     `**Total Discussions:** ${digest.totals.discussions}  `,
     '',
+  ];
+
+  if (countSummary) {
+    lines.push('## Count Summary');
+    lines.push(`**Counted Discussions:** ${countSummary.count}  `);
+    lines.push(`**Basis:** ${countSummary.basis}  `);
+    lines.push('');
+  }
+
+  lines.push(
     '## Summary Overview',
     '| Discussion | Category | Status | Key Takeaway |',
     '| :--- | :--- | :--- | :--- |',
-  ];
+  );
 
   for (const record of records) {
     lines.push(
@@ -123,6 +145,135 @@ function shouldIncludeEffectivenessSection(question: string): boolean {
   return ['effectiveness', 'support quality', 'response time', 'sla', 'performance'].some((keyword) =>
     question.includes(keyword)
   );
+}
+
+function assertDiscussionScopedQuestion(question: string, normalizedQuestion: string): void {
+  const mentionsIssues = /\bissues?\b/.test(normalizedQuestion);
+  const mentionsDiscussions = /\bdiscussions?\b/.test(normalizedQuestion);
+
+  if (!mentionsIssues || mentionsDiscussions) {
+    return;
+  }
+
+  const correctedQuestion = question.replace(/\bissues?\b/gi, 'discussions');
+  throw new DiscussionsOnlyAnalyzerError(
+    [
+      'forge-discussion-analyzer works with GitHub Discussions only.',
+      `Did you mean: "${correctedQuestion}"`,
+      '',
+      'To narrow the results, ask with filters such as:',
+      '- category: "Show discussions in the Ideas category from last week"',
+      '- relative window: "Count discussions created last week"',
+      '- explicit dates: "Summarize discussions after 2026-01-01 and before 2026-01-31"',
+      '- combined scope: "List unresolved discussions in Q&A after 2026-02-15"',
+    ].join('\n')
+  );
+}
+
+async function refreshAndPrepareDigest(options: RunDiscussionAnalyzerOptions): Promise<PreparedDiscussionDigest> {
+  await runDiscussionFetch({
+    cwd: options.cwd,
+    token: options.token,
+    when: options.when,
+    after: options.after,
+    before: options.before,
+    category: options.category,
+    limit: options.limit ?? DEFAULT_ANALYZER_REFRESH_LIMIT,
+  });
+
+  return prepareLatestDiscussionDigest(options.cwd);
+}
+
+function deriveCountSummary(
+  digest: PreparedDiscussionDigest,
+  question: string,
+  normalizedQuestion: string,
+): { count: number; basis: string; records: PreparedDiscussionDigest['records'] } | null {
+  if (!/(count|how many|number of|total)/.test(normalizedQuestion)) {
+    return null;
+  }
+
+  const temporalFilter = extractTemporalFilter(question);
+  const useCreatedAt = /\bcreated\b/.test(normalizedQuestion);
+  const records = digest.records.filter((record) => {
+    if (!temporalFilter) {
+      return true;
+    }
+
+    const timestamp = new Date(useCreatedAt ? record.createdAt : record.updatedAt);
+    if (Number.isNaN(timestamp.getTime())) {
+      return false;
+    }
+    if (temporalFilter.after && timestamp < temporalFilter.after) {
+      return false;
+    }
+    if (temporalFilter.before && timestamp > temporalFilter.before) {
+      return false;
+    }
+    return true;
+  });
+
+  return {
+    count: records.length,
+    basis: temporalFilter
+      ? `${useCreatedAt ? 'createdAt' : 'updatedAt'} filtered by ${temporalFilter.label}`
+      : `${useCreatedAt ? 'createdAt' : 'updatedAt'} across the prepared digest`,
+    records,
+  };
+}
+
+function extractTemporalFilter(question: string): { after?: Date; before?: Date; label: string } | null {
+  const lowered = question.toLowerCase();
+  const sinceMatch = question.match(/\bsince\s+(\d{4}-\d{2}-\d{2})\b/i);
+  if (sinceMatch) {
+    return {
+      after: new Date(`${sinceMatch[1]}T00:00:00.000Z`),
+      label: `since ${sinceMatch[1]}`,
+    };
+  }
+
+  const afterMatch = question.match(/\bafter\s+(\d{4}-\d{2}-\d{2})\b/i);
+  const beforeMatch = question.match(/\bbefore\s+(\d{4}-\d{2}-\d{2})\b/i);
+  if (afterMatch || beforeMatch) {
+    return {
+      after: afterMatch ? new Date(`${afterMatch[1]}T00:00:00.000Z`) : undefined,
+      before: beforeMatch ? new Date(`${beforeMatch[1]}T23:59:59.999Z`) : undefined,
+      label: [
+        afterMatch ? `after ${afterMatch[1]}` : null,
+        beforeMatch ? `before ${beforeMatch[1]}` : null,
+      ].filter(Boolean).join(' and '),
+    };
+  }
+
+  if (/\btoday\b/.test(lowered)) {
+    const now = new Date();
+    return {
+      after: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0)),
+      before: now,
+      label: 'today',
+    };
+  }
+
+  if (/\byesterday\b/.test(lowered)) {
+    const now = new Date();
+    const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+    return {
+      after: new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000),
+      before: startOfToday,
+      label: 'yesterday',
+    };
+  }
+
+  if (/\blast week\b|\blast-week\b/.test(lowered)) {
+    const now = new Date();
+    return {
+      after: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+      before: now,
+      label: 'last week',
+    };
+  }
+
+  return null;
 }
 
 async function persistAnalysisTrace(

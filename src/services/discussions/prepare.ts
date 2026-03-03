@@ -121,6 +121,7 @@ function buildPreparedRecord(discussion: DiscussionRun['discussions'][number]): 
     title: discussion.title,
     url: discussion.url,
     category: discussion.category.name,
+    createdAt: discussion.createdAt,
     status,
     kind,
     issue: truncateSentence(normalizedBody, 220),

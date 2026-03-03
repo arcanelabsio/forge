@@ -104,11 +104,11 @@ export function describeDiscussionFilters(filters: DiscussionFilters): string {
 
 function normalizeLimit(limit?: number): number {
   if (limit === undefined) {
-    return 25;
+    return 500;
   }
 
-  if (!Number.isInteger(limit) || limit <= 0 || limit > 100) {
-    throw new UserFacingError('Discussion fetch limit must be an integer between 1 and 100.');
+  if (!Number.isInteger(limit) || limit <= 0 || limit > 5000) {
+    throw new UserFacingError('Discussion fetch limit must be an integer between 1 and 5000.');
   }
 
   return limit;

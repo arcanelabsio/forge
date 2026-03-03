@@ -50,6 +50,8 @@ const DISCUSSIONS_QUERY = `
   }
 `;
 
+const GITHUB_DISCUSSIONS_PAGE_SIZE = 100;
+
 interface RepositoryDiscussionsResponse {
   repository: {
     discussionCategories: {
@@ -109,10 +111,11 @@ export async function fetchGitHubDiscussions(
 
   while (hasNextPage && collected.length < options.filters.limit) {
     fetchedPages += 1;
+    const remaining = options.filters.limit - collected.length;
     const response = await executeGitHubGraphQL<RepositoryDiscussionsResponse>(options.token, {
       owner: options.repository.owner,
       name: options.repository.name,
-      first: Math.min(25, options.filters.limit),
+      first: Math.min(GITHUB_DISCUSSIONS_PAGE_SIZE, remaining),
       after: afterCursor,
       categoryId: resolvedCategory?.id ?? null,
     });

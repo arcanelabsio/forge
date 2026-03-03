@@ -7,11 +7,13 @@ export const forgeDiscussionAnalyzerEntry: SummonableEntry = {
   purpose: 'Analyze GitHub Discussions for the current repository through Forge-managed fetching, preprocessing, and compact sidecar context.',
   instructions: [
     'Use this summonable when the user wants a digest, triage, pattern analysis, or follow-up answer based on GitHub Discussions.',
+    'If the user asks about GitHub Issues, fail fast and correct them toward GitHub Discussions instead of pretending this analyzer covers issues.',
     `Treat \`${COPILOT_RUNTIME_ENTRY}\` as the single backend for this workflow because the installed Copilot runtime bundles Forge there.`,
     'Ask for approval once for the Forge command that fetches or analyzes discussions, then let Forge complete the workflow instead of decomposing it into extra shell steps.',
     'Do not run npm install, repair Forge dependencies, or switch to raw gh api graphql when Forge is available. Only consider a non-Forge fallback if the Forge runtime is truly unavailable and the user explicitly approves that fallback.',
     'Delegate data acquisition, filtering, and preprocessing to Forge instead of re-fetching data or embedding large prompt instructions.',
     'If analysis needs fresher data, use Forge to fetch or refresh discussions first and then continue with Forge-managed analysis.',
+    'When redirecting the user, suggest ways to narrow discussions by category, relative windows like last week, or explicit after/before date ranges.',
   ].join(' '),
   capabilities: [
     {
@@ -29,10 +31,10 @@ export const forgeDiscussionAnalyzerEntry: SummonableEntry = {
     {
       name: '/agent forge-discussion-analyzer',
       description: 'Select the discussion analyzer summonable, then ask a question.',
-      usage: `${COPILOT_RUNTIME_ENTRY} --run-summonable forge-discussion-analyzer --question "<your question>"`,
+      usage: `${COPILOT_RUNTIME_ENTRY} --run forge-discussion-analyzer --question "<your question>"`,
       examples: [
         '/agent -> select forge-discussion-analyzer -> "what were the major support themes last week?"',
-        `${COPILOT_RUNTIME_ENTRY} --run-summonable forge-discussion-analyzer --question "summarize unresolved discussions"`,
+        `${COPILOT_RUNTIME_ENTRY} --run forge-discussion-analyzer --question "summarize unresolved discussions"`,
       ],
     },
   ],

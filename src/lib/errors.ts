@@ -66,3 +66,10 @@ export class DiscussionArtifactsRequiredError extends UserFacingError {
     this.name = 'DiscussionArtifactsRequiredError';
   }
 }
+
+export class DiscussionsOnlyAnalyzerError extends UserFacingError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DiscussionsOnlyAnalyzerError';
+  }
+}
