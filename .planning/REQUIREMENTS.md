@@ -8,7 +8,7 @@
 ### Installation And Invocation
 
 - [x] **INVK-01**: User can run Forge through `npx forge-ai-assist@latest`
-- [ ] **INVK-02**: Forge can install or update summonable assistant entries in assistant-owned runtime locations from one managed source
+- [x] **INVK-02**: Forge can install or update summonable assistant entries in assistant-owned runtime locations from one managed source
 - [x] **INVK-03**: Forge can make a GitHub Copilot agent available through `/agent` as the first end-to-end supported workflow
 - [x] **INVK-04**: Forge exits with a clear message when a repository-analysis flow is invoked outside a Git repository
 
@@ -21,10 +21,10 @@
 
 ### Repository Analysis
 
-- [ ] **ANLY-01**: Forge can detect the current Git repository root and analyze repository context from that root
-- [ ] **ANLY-02**: Forge can inventory key repository characteristics needed for planning, including stack, structure, and existing assistant-relevant context
-- [ ] **ANLY-03**: Forge can distinguish between repository facts it observed and recommendations it inferred
-- [ ] **ANLY-04**: Forge can surface analysis results in sidecar artifacts that users or maintainers can review later
+- [x] **ANLY-01**: Forge can detect the current Git repository root and analyze repository context from that root
+- [x] **ANLY-02**: Forge can inventory key repository characteristics needed for planning, including stack, structure, and existing assistant-relevant context
+- [x] **ANLY-03**: Forge can distinguish between repository facts it observed and recommendations it inferred
+- [x] **ANLY-04**: Forge can surface analysis results in sidecar artifacts that users or maintainers can review later
 
 ### Planning Outputs
 
@@ -35,18 +35,18 @@
 
 ### Assistant Support
 
-- [ ] **ASST-01**: Forge supports major assistant contexts including Claude, GitHub Copilot, Codex, and Gemini
-- [ ] **ASST-02**: Forge can present or expose the right summonable skill, agent, or task entrypoint for each supported assistant context
-- [ ] **ASST-03**: Forge can keep a shared internal task model while adapting presentation to assistant-specific conventions
-- [ ] **ASST-04**: Forge can no-op safely when a requested assistant context is unsupported or unavailable
-- [ ] **ASST-05**: Forge can manage assistant installation targets without requiring users to manually copy files into multiple assistant directories
+- [x] **ASST-01**: Forge supports major assistant contexts including Claude, GitHub Copilot, Codex, and Gemini
+- [x] **ASST-02**: Forge can present or expose the right summonable skill, agent, or task entrypoint for each supported assistant context
+- [x] **ASST-03**: Forge can keep a shared internal task model while adapting presentation to assistant-specific conventions
+- [x] **ASST-04**: Forge can no-op safely when a requested assistant context is unsupported or unavailable
+- [x] **ASST-05**: Forge can manage assistant installation targets without requiring users to manually copy files into multiple assistant directories
 
 ### Delivery Foundations
 
 - [x] **DELV-01**: Project ships as an npm package that exposes a CLI executable for `npx forge-ai-assist@latest`
 - [x] **DELV-02**: Project includes automated tests for Git-repo detection, sidecar writes, and rerun idempotency
-- [ ] **DELV-03**: Project includes automated tests for analysis output generation and plan generation
-- [ ] **DELV-04**: Project includes smoke tests that validate sidecar-only behavior against temporary Git repositories
+- [x] **DELV-03**: Project includes automated tests for analysis output generation and plan generation
+- [x] **DELV-04**: Project includes smoke tests that validate sidecar-only behavior against temporary Git repositories
 
 ## v2 Requirements
 
@@ -70,30 +70,30 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INVK-01 | Phase 6 | Complete |
-| INVK-02 | Phase 4 | Pending |
+| INVK-02 | Phase 4 | Complete |
 | INVK-03 | Phase 3 | Complete |
 | INVK-04 | Phase 6 | Complete |
 | SIDE-01 | Phase 6 | Complete |
 | SIDE-02 | Phase 6 | Complete |
 | SIDE-03 | Phase 6 | Complete |
 | SIDE-04 | Phase 6 | Complete |
-| ANLY-01 | Phase 2 | Pending |
-| ANLY-02 | Phase 2 | Pending |
-| ANLY-03 | Phase 2 | Pending |
-| ANLY-04 | Phase 2 | Pending |
+| ANLY-01 | Phase 2 | Complete |
+| ANLY-02 | Phase 2 | Complete |
+| ANLY-03 | Phase 2 | Complete |
+| ANLY-04 | Phase 2 | Complete |
 | PLAN-01 | Phase 3 | Complete |
 | PLAN-02 | Phase 3 | Complete |
 | PLAN-03 | Phase 3 | Complete |
 | PLAN-04 | Phase 3 | Complete |
-| ASST-01 | Phase 4 | Pending |
-| ASST-02 | Phase 4 | Pending |
-| ASST-03 | Phase 4 | Pending |
-| ASST-04 | Phase 4 | Pending |
-| ASST-05 | Phase 4 | Pending |
+| ASST-01 | Phase 4 | Complete |
+| ASST-02 | Phase 4 | Complete |
+| ASST-03 | Phase 4 | Complete |
+| ASST-04 | Phase 4 | Complete |
+| ASST-05 | Phase 4 | Complete |
 | DELV-01 | Phase 6 | Complete |
 | DELV-02 | Phase 5 | Complete |
-| DELV-03 | Phase 5 | Pending |
-| DELV-04 | Phase 5 | Pending |
+| DELV-03 | Phase 5 | Complete |
+| DELV-04 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 25 total
@@ -102,4 +102,4 @@
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 after roadmap traceability alignment*
+*Last updated: 2026-03-02 after Phase 6 Audit Closure*

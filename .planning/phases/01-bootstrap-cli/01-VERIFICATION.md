@@ -4,15 +4,29 @@
 
 | Requirement | Description | Status | Evidence Source |
 | ----------- | ----------- | ------ | --------------- |
+| INVK-01 | User can run Forge through npx forge-ai-assist@latest | PASS | `package.json`, `npm pack` + `npx` test |
+| INVK-04 | Git repository guard | PASS | `src/services/git.ts`, `tests/smoke/cli.test.ts` |
 | SIDE-01 | Single Forge-owned directory (.forge) | PASS | `src/config/sidecar.ts`, `tests/smoke/cli.test.ts` |
 | SIDE-02 | No source modification | PASS | `src/services/sidecar.ts`, `tests/smoke/cli.test.ts` |
 | SIDE-03 | Idempotency | PASS | `tests/smoke/cli.test.ts` ('multiple runs do not corrupt') |
 | SIDE-04 | Metadata tracking | PASS | `src/services/metadata.ts`, `tests/smoke/cli.test.ts` |
-| INVK-04 | Git repository guard | PASS | `src/services/git.ts`, `tests/smoke/cli.test.ts` |
+| DELV-01 | Project ships as an npm package with CLI | PASS | `package.json`, `npm pack` verification |
 
 ---
 
 ## Detailed Mapping
+
+### INVK-01: User can run Forge through npx forge-ai-assist@latest
+Forge MUST be runnable as a global CLI tool via the `npx` package runner.
+
+- **Source Evidence:** `package.json` defines the `bin` entrypoint for `forge-ai-assist`.
+- **Test Evidence:** Verified by building the project, generating a packed tarball with `npm pack`, and successfully executing the help command using `npx` on the tarball in a temporary directory.
+
+### INVK-04: Git repository guard
+Forge MUST NOT run in a directory that is not part of a Git repository.
+
+- **Source Evidence:** `src/services/git.ts`'s `getRepoRoot` throws a `RepositoryRequiredError` if `git rev-parse --show-toplevel` fails. This is called early in `bootstrapCommand`.
+- **Test Evidence:** Smoke test `exits with error outside a git repo` confirms the CLI fails with a relevant error message when run outside a repository.
 
 ### SIDE-01: Single Forge-owned directory (.forge)
 Forge MUST operate within a single Forge-owned directory (.forge) in the repository root.
@@ -38,15 +52,17 @@ Forge MUST track its own state and history within the .forge directory via a str
 - **Source Evidence:** `src/services/metadata.ts` defines a Zod schema for `metadata.json` including versioning, creation/update timestamps, and a run history log.
 - **Test Evidence:** Smoke test `multiple runs do not corrupt metadata or sidecar` checks `metadata.history.length` to confirm tracking is functional.
 
-### INVK-04: Git repository guard
-Forge MUST NOT run in a directory that is not part of a Git repository.
+### DELV-01: Project ships as an npm package with CLI
+Forge MUST be distributable as a standard npm package containing its compiled binaries.
 
-- **Source Evidence:** `src/services/git.ts`'s `getRepoRoot` throws a `RepositoryRequiredError` if `git rev-parse --show-toplevel` fails. This is called early in `bootstrapCommand`.
-- **Test Evidence:** Smoke test `exits with error outside a git repo` confirms the CLI fails with a relevant error message when run outside a repository.
+- **Source Evidence:** `package.json` contains appropriate `bin`, `files`, and `engines` fields.
+- **Test Evidence:** `npm pack` generates a valid tarball containing the `dist/` folder with compiled TypeScript files and assets.
 
 ---
 
-## Automated Test Evidence
+## Evidence Logs
+
+### Automated Test Evidence
 
 ```text
 > forge-ai-assist@0.1.0 test:smoke
@@ -71,4 +87,30 @@ Forge MUST NOT run in a directory that is not part of a Git repository.
       Tests  5 passed (5)
    Start at  08:32:19
    Duration  2.11s (transform 21ms, setup 0ms, import 81ms, tests 1.90s, environment 0ms)
+```
+
+### Packaging & Invocation Evidence
+
+```text
+$ npm pack
+npm notice 📦  forge-ai-assist@0.1.0
+...
+npm notice filename: forge-ai-assist-0.1.0.tgz
+...
+$ npx ../forge-ai-assist-0.1.0.tgz --help
+Usage: forge-ai-assist [options] [command]
+
+Forge AI Assist CLI
+
+Options:
+  -v, --version       output the current version
+  --cwd <path>        The working directory to run the command in. (default: "/Users/ajitg/workspace/forge/temp-install")
+  -h, --help          display help for command
+
+Commands:
+  bootstrap           Initialize or update the Forge sidecar in the current repository.
+  analyze             Analyze the repository to identify facts and recommendations.
+  plan [options]      Generate an end-to-end action plan for a task.
+  install-assistants  Expose Forge AI assistant entrypoints for the repository.
+  install-copilot     Expose the GitHub Copilot /agent entrypoint for the repository (alias for install-assistants).
 ```

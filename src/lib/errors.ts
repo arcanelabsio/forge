@@ -24,3 +24,13 @@ export class SubprocessError extends UserFacingError {
     this.name = "SubprocessError";
   }
 }
+
+/**
+ * Thrown when a plan is requested but no repository analysis exists.
+ */
+export class AnalysisRequiredError extends UserFacingError {
+  constructor(message = 'No repository analysis found. Please run "forge analyze" before generating a plan.') {
+    super(message);
+    this.name = "AnalysisRequiredError";
+  }
+}

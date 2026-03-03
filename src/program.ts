@@ -5,7 +5,7 @@ import { UserFacingError } from "./lib/errors.js";
 import { bootstrapCommand } from "./commands/bootstrap.js";
 import { analyzeCommand } from "./commands/analyze.js";
 import { planCommand } from "./commands/plan.js";
-import { installCopilotCommand } from "./commands/install-copilot.js";
+import { installAssistantsCommand } from "./commands/install-assistants.js";
 
 type PackageManifest = {
   name?: string;
@@ -62,11 +62,19 @@ export async function createProgram(): Promise<Command> {
     });
 
   program
-    .command("install-copilot")
-    .description("Expose the GitHub Copilot /agent entrypoint for the repository.")
-    .action(async (options) => {
+    .command("install-assistants")
+    .description("Expose Forge AI assistant entrypoints for the repository.")
+    .action(async () => {
       const opts = program.opts();
-      await installCopilotCommand(opts.cwd);
+      await installAssistantsCommand(opts.cwd);
+    });
+
+  program
+    .command("install-copilot")
+    .description("Expose the GitHub Copilot /agent entrypoint for the repository (alias for install-assistants).")
+    .action(async () => {
+      const opts = program.opts();
+      await installAssistantsCommand(opts.cwd);
     });
 
   program.action(async () => {

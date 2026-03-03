@@ -1,3 +1,9 @@
+---
+phase: 01-bootstrap-cli
+plan: 01
+requirements-completed: [INVK-01, DELV-01]
+---
+
 # 01-01-SUMMARY.md
 
 ## Accomplishments

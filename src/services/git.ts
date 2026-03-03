@@ -37,16 +37,24 @@ export class GitService {
    * Returns the current branch name.
    */
   async getBranch(): Promise<string> {
-    const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
-    return stdout.trim();
+    try {
+      const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
+      return stdout.trim();
+    } catch {
+      return 'unknown';
+    }
   }
 
   /**
    * Returns the current commit hash.
    */
   async getCommitHash(): Promise<string> {
-    const { stdout } = await execa('git', ['rev-parse', 'HEAD']);
-    return stdout.trim();
+    try {
+      const { stdout } = await execa('git', ['rev-parse', 'HEAD']);
+      return stdout.trim();
+    } catch {
+      return 'unknown';
+    }
   }
 
   /**

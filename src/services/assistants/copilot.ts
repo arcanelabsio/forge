@@ -1,6 +1,8 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { AssistantAdapter } from './registry.js';
+import { AssistantId, AssistantAvailability } from '../../contracts/assistants.js';
+import { SummonableEntry } from '../../contracts/summonable-entry.js';
+import { entryRenderer } from './render-entry.js';
 import { AnalysisRun } from '../../contracts/analysis.js';
 import { PlanRun } from '../../contracts/planning.js';
 import { planningGenerator } from '../planning/generator.js';
@@ -8,45 +10,44 @@ import { planningGenerator } from '../planning/generator.js';
 /**
  * GitHub Copilot adapter for Forge.
  *
- * This service handles Copilot-specific conventions and materializes
+ * This adapter handles Copilot-specific conventions and materializes
  * native entrypoints for the assistant.
  */
-export class CopilotAdapter {
-  private readonly assetPath: string;
+export class CopilotAdapter implements AssistantAdapter {
+  readonly id: AssistantId = 'copilot';
+  readonly name = 'GitHub Copilot';
+  readonly description = 'Native GitHub Copilot agent for repository planning.';
 
-  constructor() {
-    // Resolve asset path relative to this file's directory
-    const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    this.assetPath = path.resolve(__dirname, '../../assets/copilot/agent.md');
+  /**
+   * Checks if Copilot's environment is available.
+   */
+  async checkAvailability(): Promise<AssistantAvailability> {
+    return {
+      id: this.id,
+      isAvailable: true,
+    };
   }
 
   /**
-   * Materializes the native GitHub Copilot agent entrypoint into the target repository.
-   *
-   * @param repoRoot The root directory of the repository to install into.
-   * @returns The absolute path to the written entrypoint.
+   * Gets the target path for installing a summonable entry for Copilot.
    */
-  async install(repoRoot: string): Promise<string> {
-    const targetDir = path.join(repoRoot, '.github');
-    const targetPath = path.join(targetDir, 'copilot-instructions.md');
+  getInstallTarget(cwd: string, entry: SummonableEntry): string {
+    // Preserving existing behavior from Phase 3
+    return path.join(cwd, '.forge', 'assistants', 'copilot', 'agent.md');
+  }
 
-    // Ensure the .github directory exists
-    await mkdir(targetDir, { recursive: true });
-
-    // Read the asset content
-    const content = await readFile(this.assetPath, 'utf8');
-
-    // Write to the target location
-    await writeFile(targetPath, content, 'utf8');
-
-    return targetPath;
+  /**
+   * Renders the assistant-agnostic entry into the native format for Copilot.
+   */
+  render(entry: SummonableEntry): string {
+    return entryRenderer.renderToMarkdown(entry);
   }
 
   /**
    * Generates a plan for GitHub Copilot, delegating to the shared planning engine.
    *
-   * This method can be extended to include Copilot-specific metadata or formatting
-   * that the shared engine doesn't need to know about.
+   * This method remains for compatibility with the Phase 3 proof while 
+   * the rest of the system transitions to the generalized adapter model.
    */
   async generatePlan(analysis: AnalysisRun): Promise<PlanRun> {
     // Delegate to shared planning engine

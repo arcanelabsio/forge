@@ -54,8 +54,12 @@ export async function initializeSidecar(repoRoot: string): Promise<SidecarContex
   if (!metadata) {
     // First run initialization
     metadata = createNewMetadata();
-    await writeMetadata(context.metadataPath, metadata);
+  } else {
+    // Refresh timestamp for existing sidecar
+    metadata.updatedAt = new Date().toISOString();
   }
+
+  await writeMetadata(context.metadataPath, metadata);
 
   return {
     ...context,

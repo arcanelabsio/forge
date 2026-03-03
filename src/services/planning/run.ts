@@ -3,6 +3,7 @@ import { loadLatestAnalysis } from '../analysis/artifacts.js';
 import { persistPlanRun } from './artifacts.js';
 import { planningGenerator } from './generator.js';
 import { PlanRunSummary } from '../../contracts/planning.js';
+import { AnalysisRequiredError } from '../../lib/errors.js';
 
 /**
  * Orchestrates an end-to-end planning run.
@@ -18,9 +19,7 @@ export async function runPlanningFlow(
   const analysis = await loadLatestAnalysis(context);
 
   if (!analysis) {
-    throw new Error(
-      'No repository analysis found. Please run "forge analyze" before generating a plan.'
-    );
+    throw new AnalysisRequiredError();
   }
 
   // 2. Generate plan set grounded in analysis and invocation context
