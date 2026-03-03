@@ -46,6 +46,12 @@ export NPM_TOKEN=your_npm_token_here
 make release v1.0.0
 ```
 
+After npm publish, create the matching git tag and GitHub Release note:
+
+```bash
+make release-tag v1.0.0
+```
+
 ## Optional Flags
 
 - `make release v1.0.0 next --tag next` is not supported; use the direct npm command when you need extra flags
@@ -61,9 +67,8 @@ make release v1.0.0
 
 Recommended follow-up steps:
 
-1. Push the version commit and git tag
-2. Create or update a GitHub Release note for the published version
-3. Verify public install and bundled Copilot runtime:
+1. Run `make release-tag v1.0.0` for the published version
+2. Verify public install and bundled Copilot runtime:
 
 ```bash
 npx forge-ai-assist@latest
