@@ -115,7 +115,7 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       await runCLI([], tempRepoPath);
       const agentPath = join(tempHomePath, '.copilot/agents/forge-discussion-analyzer.agent.md');
       const customized = (await readFile(agentPath, 'utf8')).replace(
-        'Add team- or user-specific Copilot instructions here. Forge preserves this section across updates.',
+        '<!-- Add team- or user-specific Copilot instructions below this line. -->',
         'Team custom instruction: escalate billing issues to the support lead.',
       );
       await writeFile(agentPath, customized, 'utf8');

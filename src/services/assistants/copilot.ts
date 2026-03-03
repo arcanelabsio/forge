@@ -108,7 +108,8 @@ function renderCopilotAgent(entry: SummonableEntry): string {
     FORGE_MANAGED_END,
     '',
     FORGE_USER_START,
-    'Add team- or user-specific Copilot instructions here. Forge preserves this section across updates.',
+    '<!-- Add team- or user-specific Copilot instructions below this line. -->',
+    '<!-- Keep your custom instructions outside Forge managed markers so updates preserve them. -->',
     FORGE_USER_END,
   ].join('\n');
 }
