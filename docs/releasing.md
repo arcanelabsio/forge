@@ -69,8 +69,17 @@ Recommended follow-up steps:
 npx forge-ai-assist@latest
 ls ~/.copilot/agents
 ls ~/.copilot/forge/bin
+ls ~/.copilot/forge/node_modules
 node "$HOME/.copilot/forge/bin/forge.mjs" --version
 ```
+
+Expected post-install state:
+
+- `~/.copilot/agents/forge-discussion-analyzer.agent.md` exists
+- `~/.copilot/forge/node_modules` exists and is populated
+- `node "$HOME/.copilot/forge/bin/forge.mjs" --help` works immediately
+- no manual `npm install` is required inside `~/.copilot/forge`
+- the installed Copilot agent routes discussion analysis through Forge instead of raw `gh api graphql`
 
 ## Failure Handling
 
@@ -78,3 +87,4 @@ node "$HOME/.copilot/forge/bin/forge.mjs" --version
 - If tests fail, do not publish; fix the issue and rerun the release command
 - If publish succeeds but local cleanup fails, the release is already live; remove the tarball manually and proceed with tag/release-note cleanup
 - If a target machine has only `~/.copilot/ide/*.lock`, rerunning `npx forge-ai-assist@latest` should still bootstrap `~/.copilot/agents` and `~/.copilot/forge`
+- If you still see Copilot attempting `npm install` or raw `gh api graphql`, reinstall Forge and inspect the generated `~/.copilot/agents/forge-discussion-analyzer.agent.md` plus `~/.copilot/forge/node_modules`

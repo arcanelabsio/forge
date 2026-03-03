@@ -69,13 +69,13 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       expect(exitCode).toBe(0);
       expect(stdout).toContain(`Installing Forge Copilot runtime to ${globalCopilotPath}`);
       expect(stdout).toContain(`Global install root: ${globalCopilotPath}`);
-      expect(await fileExists(join(globalCopilotPath, 'agents/forge-agent.agent.md'))).toBe(true);
       expect(await fileExists(join(globalCopilotPath, 'agents/forge-discussion-analyzer.agent.md'))).toBe(true);
       expect(await fileExists(join(globalCopilotPath, 'forge/bin/forge.mjs'))).toBe(true);
       expect(await fileExists(join(globalCopilotPath, 'forge/dist/cli.js'))).toBe(true);
+      expect(await fileExists(join(globalCopilotPath, 'forge/node_modules'))).toBe(true);
       expect(await fileExists(join(globalCopilotPath, 'forge/VERSION'))).toBe(true);
       expect(await fileExists(join(globalCopilotPath, 'forge/forge-file-manifest.json'))).toBe(true);
-      expect(await fileExists(join(tempRepoPath, '.copilot/agents/forge-agent.agent.md'))).toBe(false);
+      expect(await fileExists(join(globalCopilotPath, 'agents/forge-agent.agent.md'))).toBe(false);
       expect(await fileExists(join(tempRepoPath, '.claude/forge-agent.md'))).toBe(false);
       expect(await fileExists(join(tempRepoPath, '.codex/forge-agent.md'))).toBe(false);
       expect(await fileExists(join(tempRepoPath, '.gemini/forge-agent.md'))).toBe(false);
@@ -86,7 +86,6 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       const globalCopilotPath = join(tempHomePath, '.copilot');
 
       expect(exitCode).toBe(0);
-      expect(await fileExists(join(globalCopilotPath, 'agents/forge-agent.agent.md'))).toBe(true);
       expect(await fileExists(join(globalCopilotPath, 'agents/forge-discussion-analyzer.agent.md'))).toBe(true);
 
       const copilotAnalyzer = await readFile(
@@ -102,6 +101,8 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       expect(copilotAnalyzer).toContain('color: blue');
       expect(copilotAnalyzer).toContain('Forge Discussion Analyzer');
       expect(copilotAnalyzer).toContain('node "$HOME/.copilot/forge/bin/forge.mjs" --run-summonable forge-discussion-analyzer');
+      expect(copilotAnalyzer).toContain('Ask for approval once for the Forge command');
+      expect(copilotAnalyzer).toContain('Do not run npm install, repair Forge dependencies, or switch to raw gh api graphql');
     });
 
     it('writes installer metadata for reruns and bundled runtime state', async () => {
@@ -124,8 +125,36 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       expect(manifest.runtimePath).toBe(join(tempHomePath, '.copilot/forge'));
       expect(manifest.runtimeEntryPath).toBe(join(tempHomePath, '.copilot/forge/bin/forge.mjs'));
       expect(manifest.agentsPath).toBe(join(tempHomePath, '.copilot/agents'));
-      expect(manifest.summonables).toEqual(['forge-agent', 'forge-discussion-analyzer']);
+      expect(manifest.summonables).toEqual(['forge-discussion-analyzer']);
       expect(manifest.bundledFiles).toContain('forge/dist');
+      expect(manifest.bundledFiles).toContain('forge/node_modules');
+    });
+
+    it('removes the legacy forge-agent file on reinstall', async () => {
+      const legacyAgentPath = join(tempHomePath, '.copilot/agents/forge-agent.agent.md');
+      await mkdir(join(tempHomePath, '.copilot/agents'), { recursive: true });
+      await writeFile(legacyAgentPath, 'legacy agent', 'utf8');
+
+      await runCLI([], tempRepoPath);
+
+      expect(await fileExists(legacyAgentPath)).toBe(false);
+    });
+
+    it('runs the installed bundled runtime without extra npm installs', async () => {
+      await runCLI([], tempRepoPath);
+
+      const bundledRuntimePath = join(tempHomePath, '.copilot/forge/bin/forge.mjs');
+      const { stdout, exitCode } = await execa('node', [bundledRuntimePath, '--help'], {
+        cwd: tempRepoPath,
+        env: {
+          ...process.env,
+          HOME: tempHomePath,
+        },
+      });
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('Usage: forge');
+      expect(stdout).toContain('Install the Forge Copilot runtime into ~/.copilot');
     });
   });
 

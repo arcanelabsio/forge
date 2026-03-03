@@ -78,6 +78,7 @@ export class CopilotAdapter implements AssistantAdapter {
 }
 
 export const copilotAdapter = new CopilotAdapter();
+export const LEGACY_COPILOT_AGENT_IDS = ['forge-agent'];
 
 function renderCopilotAgent(entry: SummonableEntry): string {
   const description = sanitizePlainScalar(entry.purpose);

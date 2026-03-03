@@ -216,3 +216,26 @@ Plans:
 - [x] 10-01 - Design the global Copilot installer UX and runtime payload model
 - [x] 10-02 - Bootstrap the ~/.copilot runtime, tools, and installer metadata
 - [x] 10-03 - Verify fresh-machine global installs and document the support model
+
+## Phase 11: Runtime Self-Sufficiency And Agent Discipline (Complete)
+
+Eliminate follow-on install prompts and tighten agent behavior so the installed Copilot runtime is fully ready after `npx forge-ai-assist@latest` and the agent stays inside Forge-managed execution.
+
+**Goal:** Make the installed `~/.copilot` runtime self-sufficient at install time by resolving dependencies during `npx forge-ai-assist@latest`, reduce the analysis flow to a single user approval before execution, and make the Copilot agent instructions explicitly forbid fallback to direct `gh api graphql` workflows when Forge can handle the request.
+**Requirements:** EXTD-03
+**Depends on:** Phase 10
+**Plans:** 3 plans
+
+**Success criteria:**
+
+- `npx forge-ai-assist@latest` installs a ready-to-run runtime under `~/.copilot` without later `npm install` prompts inside the bundled runtime
+- The bundled Forge runtime includes the dependencies it needs during the initial install step
+- The installed Copilot agents ask for approval once, then continue without additional approval prompts for the same Forge-managed request
+- Agent instructions explicitly direct Copilot to let Forge process discussion-analysis requests and not fall back to raw GitHub GraphQL shell calls unless Forge is truly unavailable
+- Verification covers the feedback scenario where Copilot previously attempted `npm install`, `gh api graphql`, and repeated approval prompts
+- Only `forge-discussion-analyzer` is installed into `~/.copilot/agents`; the legacy generic `forge-agent` asset is removed from the public Copilot install surface
+
+Plans:
+- [x] 11-01 - Make the bundled ~/.copilot runtime dependency-complete at install time
+- [x] 11-02 - Tighten Copilot agent instructions and one-approval execution behavior
+- [x] 11-03 - Verify the feedback scenario and document the support expectations

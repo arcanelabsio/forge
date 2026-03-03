@@ -11,7 +11,7 @@ import {
   readInstallerRuntimeMetadata,
   writeInstallerRuntimeMetadata,
 } from '../metadata.js';
-import { COPILOT_RUNTIME_ENTRY } from './copilot.js';
+import { COPILOT_RUNTIME_ENTRY, LEGACY_COPILOT_AGENT_IDS } from './copilot.js';
 
 /**
  * AssistantInstallService: Orchestrates the installation and update of 
@@ -221,12 +221,21 @@ export class AssistantInstallService {
     const packageRoot = fileURLToPath(new URL('../../../', import.meta.url));
     const bundledDistPath = fileURLToPath(new URL('../../../dist', import.meta.url));
     const runtimeDistPath = path.join(layout.runtimePath, 'dist');
+    const bundledNodeModulesPath = path.join(packageRoot, 'node_modules');
+    const runtimeNodeModulesPath = path.join(layout.runtimePath, 'node_modules');
     await fs.rm(runtimeDistPath, { recursive: true, force: true });
     await fs.cp(bundledDistPath, runtimeDistPath, { recursive: true });
     details.push(`installed bundled runtime to ${runtimeDistPath}`);
+    await fs.rm(runtimeNodeModulesPath, { recursive: true, force: true });
+    await fs.cp(bundledNodeModulesPath, runtimeNodeModulesPath, { recursive: true });
+    details.push(`installed bundled dependencies to ${runtimeNodeModulesPath}`);
 
     const manifestRaw = await fs.readFile(path.join(packageRoot, 'package.json'), 'utf8');
-    const manifest = JSON.parse(manifestRaw) as { name?: string; version?: string };
+    const manifest = JSON.parse(manifestRaw) as {
+      name?: string;
+      version?: string;
+      dependencies?: Record<string, string>;
+    };
 
     await fs.writeFile(
       path.join(layout.runtimePath, 'package.json'),
@@ -236,6 +245,7 @@ export class AssistantInstallService {
           version: manifest.version ?? '0.0.0',
           type: 'module',
           private: true,
+          dependencies: manifest.dependencies ?? {},
         },
         null,
         2,
@@ -255,9 +265,20 @@ export class AssistantInstallService {
     await fs.writeFile(layout.versionPath, `${manifest.version ?? '0.0.0'}\n`, 'utf8');
     details.push(`wrote VERSION (${manifest.version ?? '0.0.0'})`);
 
+    for (const legacyAgentId of LEGACY_COPILOT_AGENT_IDS) {
+      const legacyAgentPath = path.join(layout.agentsPath, `${legacyAgentId}.agent.md`);
+      try {
+        await fs.rm(legacyAgentPath, { force: true });
+        details.push(`removed obsolete agent ${legacyAgentPath}`);
+      } catch {
+        // Ignore cleanup failures so the runtime install can still succeed.
+      }
+    }
+
     const existingMetadata = await readInstallerRuntimeMetadata(layout.metadataPath);
     const bundledFiles = [
       path.relative(layout.rootPath, runtimeDistPath),
+      path.relative(layout.rootPath, runtimeNodeModulesPath),
       path.relative(layout.rootPath, layout.runtimeEntryPath),
       path.relative(layout.rootPath, layout.versionPath),
       path.relative(layout.rootPath, path.join(layout.runtimePath, 'package.json')),

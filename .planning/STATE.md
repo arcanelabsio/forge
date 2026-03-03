@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: Phase 10
-status: complete
-last_updated: "2026-03-03T11:35:00.000Z"
+current_phase: Phase 11
+status: completed
+last_updated: "2026-03-03T12:00:00.000Z"
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 29
-  completed_plans: 29
+  total_phases: 11
+  completed_phases: 11
+  total_plans: 32
+  completed_plans: 32
   percent: 100
 ---
 
@@ -17,7 +17,7 @@ progress:
 
 **Last updated:** 2026-03-03
 **Current milestone:** v1
-**Current phase:** Phase 10
+**Current phase:** Phase 11
 **Status:** Complete
 
 ## Active Roadmap
@@ -32,6 +32,7 @@ progress:
 - [x] Phase 8: Cross-Assistant Forge Discussion Analyzer Summonable
 - [x] Phase 9: Release Management And Public Install
 - [x] Phase 10: Copilot Runtime Bootstrap And Install UX
+- [x] Phase 11: Runtime Self-Sufficiency And Agent Discipline
 
 ## Audit Closure
 
@@ -53,6 +54,10 @@ Foundational milestone audit gaps have been addressed. Phase 1 requirements are 
 - Phase 10 added: make the first-run installer succeed on fresh machines where the Copilot runtime layout does not exist yet.
 - Scope refinement: v1 remains Copilot-first, but the installer must always install globally into `~/.copilot` and make that runtime self-sufficient instead of depending on a project-local Forge package.
 - Phase 10 completed: Forge now installs a self-contained runtime under `~/.copilot`, writes bundled tools and installer metadata there, and installs Copilot agents that call the bundled runtime directly.
+- Phase 11 added: remove runtime dependency prompts after install and tighten Copilot agent behavior so Forge stays the executor for discussion analysis.
+- Scope refinement: the installed runtime should resolve its own dependencies during the initial `npx` install, and Copilot should seek approval once before letting Forge handle the full request.
+- Scope refinement: the public Copilot install surface should only include `forge-discussion-analyzer`; the generic `forge-agent` asset should be removed.
+- Phase 11 completed: Forge now bundles runtime dependencies into `~/.copilot/forge/node_modules`, installs only `forge-discussion-analyzer`, removes the legacy generic agent on reinstall, and documents the one-approval Forge-managed support model.
 
 ## Quick Tasks Completed
 
@@ -69,4 +74,4 @@ Foundational milestone audit gaps have been addressed. Phase 1 requirements are 
 
 ## Next Action
 
-- Phase 10 is complete. Next natural step is to publish the updated package and verify the new `~/.copilot` runtime bootstrap flow on a clean target machine.
+- Phase 11 is complete. Next action is user verification on a target Copilot system followed by the next product phase.

@@ -18,16 +18,15 @@ This installs Forge globally into:
 
 Forge bootstraps:
 
-- `~/.copilot/agents/forge-agent.agent.md`
 - `~/.copilot/agents/forge-discussion-analyzer.agent.md`
 - `~/.copilot/forge/dist/*`
+- `~/.copilot/forge/node_modules/*`
 - `~/.copilot/forge/bin/forge.mjs`
 - `~/.copilot/forge/VERSION`
 - `~/.copilot/forge/forge-file-manifest.json`
 
 After installation, Copilot should discover:
 
-- `forge-agent`
 - `forge-discussion-analyzer`
 
 The bundled runtime entry used by installed agents is:
@@ -54,10 +53,12 @@ Check the installed runtime:
 ```bash
 ls ~/.copilot/agents
 ls ~/.copilot/forge/bin
+ls ~/.copilot/forge/node_modules
 cat ~/.copilot/forge/VERSION
+node "$HOME/.copilot/forge/bin/forge.mjs" --help
 ```
 
-You should see the two Forge agent files plus the bundled runtime entry at `~/.copilot/forge/bin/forge.mjs`.
+You should see `forge-discussion-analyzer.agent.md`, the bundled runtime entry at `~/.copilot/forge/bin/forge.mjs`, and a populated `~/.copilot/forge/node_modules` directory. Manual `npm install` inside `~/.copilot/forge` is not part of the supported flow.
 
 ## GitHub Discussions
 
@@ -68,6 +69,8 @@ export GH_TOKEN="$(gh auth token)"
 node "$HOME/.copilot/forge/bin/forge.mjs" --fetch-discussions --when today
 node "$HOME/.copilot/forge/bin/forge.mjs" --run-summonable forge-discussion-analyzer --question "What recurring issues show up this week?"
 ```
+
+In Copilot, `forge-discussion-analyzer` should route the request through Forge itself. The expected behavior is one approval for the Forge command path, then Forge handles fetch and analysis. It should not repair the bundled runtime or fall back to raw `gh api graphql` when Forge is available.
 
 ## Updating
 
