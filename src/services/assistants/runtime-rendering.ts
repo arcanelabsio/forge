@@ -2,7 +2,49 @@ import { SummonableEntry } from '../../contracts/summonable-entry.js';
 import { FORGE_MANAGED_END, FORGE_MANAGED_START, FORGE_USER_END, FORGE_USER_START } from './copilot.js';
 import { getExposedSummonableName, getSummonableRoute } from './exposure.js';
 
-const ANALYZER_DESCRIPTION = 'Analyze GitHub Discussions for the current repository through Forge-managed live fetching and summary artifacts.';
+type AnalyzerDomain = 'discussions' | 'issues';
+
+interface AnalyzerPromptContext {
+  analyzerDescription: string;
+  workflowTitle: string;
+  roleName: string;
+  subjectPlural: string;
+  subjectSingularLower: string;
+  counterpartPlural: string;
+  narrowingHint: string;
+}
+
+function getAnalyzerDomain(entry: SummonableEntry): AnalyzerDomain {
+  if (entry.metadata && typeof entry.metadata === 'object' && entry.metadata.analyzerDomain === 'issues') {
+    return 'issues';
+  }
+  return 'discussions';
+}
+
+function getAnalyzerPromptContext(entry: SummonableEntry): AnalyzerPromptContext {
+  const domain = getAnalyzerDomain(entry);
+  if (domain === 'issues') {
+    return {
+      analyzerDescription: 'Analyze GitHub Issues for the current repository through Forge-managed live fetching and summary artifacts.',
+      workflowTitle: 'Forge Issue Analyzer Workflow',
+      roleName: 'Forge Issue Analyzer',
+      subjectPlural: 'GitHub Issues',
+      subjectSingularLower: 'issue',
+      counterpartPlural: 'GitHub Discussions',
+      narrowingHint: 'label, state, relative windows, or explicit after/before dates',
+    };
+  }
+
+  return {
+    analyzerDescription: 'Analyze GitHub Discussions for the current repository through Forge-managed live fetching and summary artifacts.',
+    workflowTitle: 'Forge Discussion Analyzer Workflow',
+    roleName: 'Forge Discussion Analyzer',
+    subjectPlural: 'GitHub Discussions',
+    subjectSingularLower: 'discussion',
+    counterpartPlural: 'GitHub Issues',
+    narrowingHint: 'category, relative windows, or explicit after/before dates',
+  };
+}
 
 export function sanitizePlainScalar(value: string): string {
   return value
@@ -53,33 +95,37 @@ function renderManagedMarkdown(
   ].join('\n');
 }
 
-function renderDiscussionAgentPrompt(runtimeEntryCommand: string): string {
+function renderAnalyzerAgentPrompt(entry: SummonableEntry, runtimeEntryCommand: string): string {
+  const context = getAnalyzerPromptContext(entry);
+  const runCommand = `${runtimeEntryCommand} --run ${entry.id} --question "<question>"`;
+
   return [
     '<role>',
-    'You are the Forge Discussion Analyzer.',
-    'Analyze GitHub Discussions for the current repository using Forge as the only backend.',
+    `You are the ${context.roleName}.`,
+    `Analyze ${context.subjectPlural} for the current repository using Forge as the only backend.`,
     '</role>',
     '',
     '<instructions>',
-    '- Use this agent for discussion digests, triage, pattern analysis, and follow-up answers.',
-    '- If the user asks about GitHub Issues, explain that this analyzer only covers GitHub Discussions and stop.',
-    `- Run \`${runtimeEntryCommand} --run forge-discussion-analyzer --question "<question>"\` directly instead of delegating to unrelated helpers.`,
-    '- Every query must use a live fetch through Forge; never answer from local cached summaries alone.',
+    `- Use this agent for ${context.subjectSingularLower} digests, triage, pattern analysis, and follow-up answers.`,
+    `- If the user asks about ${context.counterpartPlural}, explain that this analyzer only covers ${context.subjectPlural} and stop.`,
+    `- Run \`${runCommand}\` directly instead of delegating to unrelated helpers.`,
+    `- Every query must use a live fetch through Forge; never answer from local cached ${context.subjectSingularLower} summaries alone.`,
     '- Ask for approval once for the Forge command, then let Forge handle fetch plus analysis.',
     '- Do not run npm install, repair Forge dependencies, or switch to raw GitHub API calls when Forge is available.',
     '- If Forge fails or times out because of network or GitHub API issues, report the Forge failure and stop.',
     '- Delegate data acquisition, filtering, preprocessing, and freshness handling to Forge.',
-    '- Suggest narrowing by category, relative windows, or explicit after/before dates when the user needs a smaller slice.',
+    `- Suggest narrowing by ${context.narrowingHint} when the user needs a smaller slice.`,
     '</instructions>',
   ].join('\n');
 }
 
 export function renderClaudeCommand(entry: SummonableEntry, workflowPath: string): string {
+  const context = getAnalyzerPromptContext(entry);
   const commandName = sanitizePlainScalar(getExposedSummonableName('claude', 'command', entry));
   const workflowReference = `@${workflowPath}`;
   const body = [
     '<objective>',
-    ANALYZER_DESCRIPTION,
+    context.analyzerDescription,
     '</objective>',
     '',
     '<execution_context>',
@@ -89,13 +135,13 @@ export function renderClaudeCommand(entry: SummonableEntry, workflowPath: string
     '<context>',
     '$ARGUMENTS',
     '',
-    'Ask a concrete question about GitHub Discussions for the current repository.',
+    `Ask a concrete question about ${context.subjectPlural} for the current repository.`,
     '</context>',
     '',
     '<process>',
     `Execute the workflow from ${workflowReference} end-to-end.`,
     'Preserve the live-fetch-only behavior for every query.',
-    'If the request is about GitHub Issues instead of GitHub Discussions, explain that limitation and stop.',
+    `If the request is about ${context.counterpartPlural} instead of ${context.subjectPlural}, explain that limitation and stop.`,
     '</process>',
   ].join('\n');
 
@@ -123,7 +169,7 @@ export function renderClaudeAgent(entry: SummonableEntry, runtimeEntryCommand: s
       `description: ${sanitizePlainScalar(entry.purpose)}`,
       'tools: Bash, Read',
     ],
-    renderDiscussionAgentPrompt(runtimeEntryCommand),
+    renderAnalyzerAgentPrompt(entry, runtimeEntryCommand),
     [
       '<!-- Add team- or user-specific Claude agent instructions below this line. -->',
       '<!-- Keep your custom instructions outside Forge managed markers so updates preserve them. -->',
@@ -132,14 +178,15 @@ export function renderClaudeAgent(entry: SummonableEntry, runtimeEntryCommand: s
 }
 
 export function renderClaudeWorkflow(_entry: SummonableEntry, runtimeEntryCommand: string): string {
+  const context = getAnalyzerPromptContext(_entry);
   return [
-    '# Forge Discussion Analyzer Workflow',
+    `# ${context.workflowTitle}`,
     '',
-    `Run \`${runtimeEntryCommand} --run forge-discussion-analyzer --question "$ARGUMENTS"\` as the only backend for this workflow.`,
+    `Run \`${runtimeEntryCommand} --run ${_entry.id} --question "$ARGUMENTS"\` as the only backend for this workflow.`,
     '',
     'Execution rules:',
-    '- Every query must use Forge live fetches; do not answer from local summary content alone.',
-    '- If the request is about GitHub Issues instead of GitHub Discussions, explain that this workflow only covers Discussions and stop.',
+    `- Every query must use Forge live fetches; do not answer from local ${context.subjectSingularLower} summary content alone.`,
+    `- If the request is about ${context.counterpartPlural} instead of ${context.subjectPlural}, explain that this workflow only covers ${context.subjectPlural} and stop.`,
     '- Ask for approval once for the Forge command, then let Forge handle fetch plus analysis.',
     '- Do not run npm install, repair Forge dependencies, or switch to raw GitHub API calls when Forge is available.',
     '- If Forge fails or times out because of network or GitHub API issues, report the Forge failure and stop.',
@@ -147,18 +194,19 @@ export function renderClaudeWorkflow(_entry: SummonableEntry, runtimeEntryComman
 }
 
 export function renderCodexSkill(entry: SummonableEntry, workflowPath: string): string {
+  const context = getAnalyzerPromptContext(entry);
   const skillName = sanitizePlainScalar(getExposedSummonableName('codex', 'skill', entry));
   const workflowReference = `@${workflowPath}`;
   const body = [
     '<codex_skill_adapter>',
     '## Skill Invocation',
     `- This skill is invoked by mentioning \`$${skillName}\`.`,
-    '- Treat all user text after the skill mention as the discussion question.',
-    '- If no question is provided, ask the user what they want to know about the repository GitHub Discussions.',
+    `- Treat all user text after the skill mention as the ${context.subjectSingularLower} question.`,
+    `- If no question is provided, ask the user what they want to know about the repository ${context.subjectPlural}.`,
     '</codex_skill_adapter>',
     '',
     '<objective>',
-    ANALYZER_DESCRIPTION,
+    context.analyzerDescription,
     '</objective>',
     '',
     '<execution_context>',
@@ -172,7 +220,7 @@ export function renderCodexSkill(entry: SummonableEntry, workflowPath: string): 
     '<process>',
     `Execute the workflow from ${workflowReference} end-to-end.`,
     'Preserve the live-fetch-only behavior for every query.',
-    'If the request is about GitHub Issues instead of GitHub Discussions, explain that limitation and stop.',
+    `If the request is about ${context.counterpartPlural} instead of ${context.subjectPlural}, explain that limitation and stop.`,
     '</process>',
   ].join('\n');
 
@@ -192,7 +240,7 @@ export function renderCodexSkill(entry: SummonableEntry, workflowPath: string): 
 }
 
 export function renderCodexAgent(entry: SummonableEntry, runtimeEntryCommand: string): string {
-  const body = renderDiscussionAgentPrompt(runtimeEntryCommand);
+  const body = renderAnalyzerAgentPrompt(entry, runtimeEntryCommand);
   return renderManagedMarkdown(
     [
       `name: "${sanitizePlainScalar(getExposedSummonableName('codex', 'agent', entry))}"`,
@@ -211,16 +259,18 @@ export function renderCodexAgent(entry: SummonableEntry, runtimeEntryCommand: st
 }
 
 export function renderCodexAgentToml(entry: SummonableEntry, runtimeEntryCommand: string): string {
+  const context = getAnalyzerPromptContext(entry);
+  const runCommand = `${runtimeEntryCommand} --run ${entry.id} --question "<question>"`;
   const body = [
     '<role>',
-    'You are the Forge Discussion Analyzer.',
-    'Analyze GitHub Discussions for the current repository using Forge as the only backend.',
+    `You are the ${context.roleName}.`,
+    `Analyze ${context.subjectPlural} for the current repository using Forge as the only backend.`,
     '</role>',
     '',
     '<instructions>',
-    '- Use this agent for discussion digests, triage, pattern analysis, and follow-up answers.',
-    '- If the user asks about GitHub Issues, explain that this analyzer only covers GitHub Discussions and stop.',
-    `- Run \`${runtimeEntryCommand} --run forge-discussion-analyzer --question "<question>"\` directly instead of delegating to unrelated helpers.`,
+    `- Use this agent for ${context.subjectSingularLower} digests, triage, pattern analysis, and follow-up answers.`,
+    `- If the user asks about ${context.counterpartPlural}, explain that this analyzer only covers ${context.subjectPlural} and stop.`,
+    `- Run \`${runCommand}\` directly instead of delegating to unrelated helpers.`,
     '- Every query must use a live fetch through Forge; never answer from local cached summaries alone.',
     '- Ask for approval once for the Forge command, then let Forge handle fetch plus analysis.',
     '- Do not run npm install, repair Forge dependencies, or switch to raw GitHub API calls when Forge is available.',
@@ -240,9 +290,11 @@ export function renderCodexWorkflow(_entry: SummonableEntry, runtimeEntryCommand
 }
 
 export function renderGeminiCommand(entry: SummonableEntry, workflowPath: string): string {
+  const context = getAnalyzerPromptContext(entry);
+  const backendCommand = `node "$HOME/.gemini/forge/bin/forge.mjs" --run ${entry.id} --question "<question>"`;
   const prompt = [
     '<objective>',
-    ANALYZER_DESCRIPTION,
+    context.analyzerDescription,
     '</objective>',
     '',
     '<context>',
@@ -252,12 +304,12 @@ export function renderGeminiCommand(entry: SummonableEntry, workflowPath: string
     '</context>',
     '',
     '<process>',
-    `Forge backend: node "$HOME/.gemini/forge/bin/forge.mjs" --run ${entry.id} --question "<question>"`,
-    'If $ARGUMENTS is empty or still appears as the literal placeholder "$ARGUMENTS", ask the user for a concrete GitHub Discussions question and stop.',
+    `Forge backend: ${backendCommand}`,
+    `If $ARGUMENTS is empty or still appears as the literal placeholder "$ARGUMENTS", ask the user for a concrete ${context.subjectPlural} question and stop.`,
     'Do not inspect the codebase, search the repository, or read files under ~/.gemini before deciding what to do.',
     'Run the Forge backend directly from the current repository once you have a concrete question.',
     'Preserve the live-fetch-only behavior for every query.',
-    'If the request is about GitHub Issues instead of GitHub Discussions, explain that limitation and stop.',
+    `If the request is about ${context.counterpartPlural} instead of ${context.subjectPlural}, explain that limitation and stop.`,
     'If Forge fails or times out because of network, auth, or GitHub API issues, report the Forge failure and stop.',
     '</process>',
   ].join('\n');
@@ -278,7 +330,7 @@ export function renderGeminiAgent(entry: SummonableEntry, runtimeEntryCommand: s
       '  - read_file',
       '  - run_shell_command',
     ],
-    renderDiscussionAgentPrompt(runtimeEntryCommand),
+    renderAnalyzerAgentPrompt(entry, runtimeEntryCommand),
     [
       '<!-- Add team- or user-specific Gemini agent instructions below this line. -->',
       '<!-- Keep your custom instructions outside Forge managed markers so updates preserve them. -->',

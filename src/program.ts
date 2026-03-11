@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { installAssistantsCommand } from "./commands/install-assistants.js";
 import { runDiscussionAnalyzer } from "./services/discussions/analyze.js";
+import { runIssueAnalyzer } from "./services/issues/analyze.js";
 import { AssistantId } from "./contracts/assistants.js";
 
 type PackageManifest = {
@@ -25,11 +26,14 @@ type ProgramOptions = {
   after?: string;
   before?: string;
   category?: string;
+  issueState?: string;
+  label?: string;
   discussionLimit?: string;
 };
 
 const EXECUTABLE_NAME = "forge";
-const DEFAULT_ANALYZER_ID = "forge-discussion-analyzer";
+const ANALYZER_IDS = ["forge-discussion-analyzer", "forge-issue-analyzer"] as const;
+type AnalyzerId = (typeof ANALYZER_IDS)[number];
 
 async function readPackageManifest(): Promise<PackageManifest> {
   const manifestUrl = new URL("../package.json", import.meta.url);
@@ -45,7 +49,7 @@ export async function createProgram(): Promise<Command> {
 
   program
     .name(EXECUTABLE_NAME)
-    .description("Install Forge assistant assets for Copilot, Claude, Codex, and Gemini, and run Forge-managed GitHub discussion workflows.")
+    .description("Install Forge assistant assets for Copilot, Claude, Codex, and Gemini, and run Forge-managed GitHub discussion and issue workflows.")
     .version(manifest.version ?? "0.0.0", "-v, --version", "output the current version")
     .option("--cwd <path>", "The working directory to run the command in.", process.cwd())
     .option("--verbose", "Show detailed installer update output.")
@@ -53,12 +57,14 @@ export async function createProgram(): Promise<Command> {
     .option("--run <analyzer>", "Run a Forge-managed analyzer.")
     .option("--question <text>", "Question or request for Forge-managed assistant execution.")
     .option("--refresh-analysis", "Re-run the live discussion analysis before answering.")
-    .option("--force-refresh", "Compatibility flag. The discussion analyzer already fetches live on every run.")
-    .option("--github-token <token>", "Explicit GitHub token override for discussions fetches.")
-    .option("--when <window>", "Relative discussions window: today, yesterday, or last-week.")
-    .option("--after <date>", "Only include discussions created on or after this date by default.")
-    .option("--before <date>", "Only include discussions created on or before this date by default.")
+    .option("--force-refresh", "Compatibility flag. Forge analyzers already fetch live on every run.")
+    .option("--github-token <token>", "Explicit GitHub token override for analyzer fetches.")
+    .option("--when <window>", "Relative analyzer window: today, yesterday, or last-week.")
+    .option("--after <date>", "Only include analyzer records created on or after this date by default.")
+    .option("--before <date>", "Only include analyzer records created on or before this date by default.")
     .option("--category <name>", "Filter discussions by GitHub discussion category name or slug.")
+    .option("--issue-state <state>", "Issue state filter: open, closed, or all.")
+    .option("--label <name>", "Filter issues by GitHub issue label.")
     .option("--discussion-limit <number>", "Maximum number of discussions to persist (1-5000).", "500")
     .addOption(new Option("--run-summonable <id>", "Run a Forge-managed assistant backend directly.").hideHelp())
     .hook("preAction", (thisCommand) => {
@@ -73,11 +79,8 @@ export async function createProgram(): Promise<Command> {
     const requestedAnalyzer = options.run ?? options.runSummonable;
 
     if (requestedAnalyzer) {
-      if (requestedAnalyzer !== DEFAULT_ANALYZER_ID) {
-        throw new Error(`Unknown analyzer "${requestedAnalyzer}". The available analyzer is ${DEFAULT_ANALYZER_ID}.`);
-      }
-
-      const answer = await runDiscussionAnalyzer({
+      const parsedAnalyzer = parseAnalyzerId(requestedAnalyzer);
+      const sharedOptions = {
         cwd: options.cwd,
         question: options.question ?? '',
         forceRefresh: options.forceRefresh,
@@ -86,9 +89,18 @@ export async function createProgram(): Promise<Command> {
         when: options.when,
         after: options.after,
         before: options.before,
-        category: options.category,
         limit: Number.parseInt(options.discussionLimit ?? "500", 10),
-      });
+      };
+      const answer = parsedAnalyzer === "forge-discussion-analyzer"
+        ? await runDiscussionAnalyzer({
+            ...sharedOptions,
+            category: options.category,
+          })
+        : await runIssueAnalyzer({
+            ...sharedOptions,
+            state: options.issueState,
+            label: options.label,
+          });
       console.log(answer);
       return;
     }
@@ -101,6 +113,14 @@ export async function createProgram(): Promise<Command> {
   });
 
   return program;
+}
+
+function parseAnalyzerId(value: string): AnalyzerId {
+  if ((ANALYZER_IDS as readonly string[]).includes(value)) {
+    return value as AnalyzerId;
+  }
+
+  throw new Error(`Unknown analyzer "${value}". Available analyzers: ${ANALYZER_IDS.join(', ')}.`);
 }
 
 function parseAssistantSelection(value?: string): AssistantId[] | undefined {

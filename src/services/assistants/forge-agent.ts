@@ -1,5 +1,6 @@
 export {
   forgeDiscussionAnalyzerEntry,
+  forgeIssueAnalyzerEntry,
   forgeSummonableEntries,
 } from './summonables.js';
 

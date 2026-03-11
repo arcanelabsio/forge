@@ -102,7 +102,7 @@ export class GitService {
     const repository = parseGitHubRepositoryRemote(remoteUrl);
     if (!repository) {
       throw new UnsupportedGitHubRemoteError(
-        `Forge only supports GitHub remotes for discussions fetches. Current origin: ${remoteUrl}`
+        `Forge only supports GitHub remotes for live fetches. Current origin: ${remoteUrl}`
       );
     }
 

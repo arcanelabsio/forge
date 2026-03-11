@@ -96,21 +96,33 @@ describe('CLI Smoke Tests - Installer Flow', () => {
 
       expect(await fileExists(join(copilotRoot, 'agents/forge-discussion-analyzer.agent.md'))).toBe(true);
       expect(await fileExists(join(copilotRoot, 'skills/forge-discussion-analyzer/SKILL.md'))).toBe(true);
+      expect(await fileExists(join(copilotRoot, 'agents/forge-issue-analyzer.agent.md'))).toBe(true);
+      expect(await fileExists(join(copilotRoot, 'skills/forge-issue-analyzer/SKILL.md'))).toBe(true);
 
       expect(await fileExists(join(claudeRoot, 'commands/forge/discussion-analyzer.md'))).toBe(true);
       expect(await fileExists(join(claudeRoot, 'agents/forge-discussion-analyzer.md'))).toBe(true);
       expect(await fileExists(join(claudeRoot, 'forge/workflows/discussion-analyzer.md'))).toBe(true);
+      expect(await fileExists(join(claudeRoot, 'commands/forge/issue-analyzer.md'))).toBe(true);
+      expect(await fileExists(join(claudeRoot, 'agents/forge-issue-analyzer.md'))).toBe(true);
+      expect(await fileExists(join(claudeRoot, 'forge/workflows/issue-analyzer.md'))).toBe(true);
       expect(await fileExists(join(claudeRoot, 'skills/forge:discussion-analyzer/SKILL.md'))).toBe(false);
 
       expect(await fileExists(join(codexRoot, 'skills/forge-discussion-analyzer/SKILL.md'))).toBe(true);
       expect(await fileExists(join(codexRoot, 'agents/forge-discussion-analyzer.md'))).toBe(true);
       expect(await fileExists(join(codexRoot, 'agents/forge-discussion-analyzer.toml'))).toBe(true);
       expect(await fileExists(join(codexRoot, 'forge/workflows/discussion-analyzer.md'))).toBe(true);
+      expect(await fileExists(join(codexRoot, 'skills/forge-issue-analyzer/SKILL.md'))).toBe(true);
+      expect(await fileExists(join(codexRoot, 'agents/forge-issue-analyzer.md'))).toBe(true);
+      expect(await fileExists(join(codexRoot, 'agents/forge-issue-analyzer.toml'))).toBe(true);
+      expect(await fileExists(join(codexRoot, 'forge/workflows/issue-analyzer.md'))).toBe(true);
       expect(await fileExists(join(codexRoot, 'forge:discussion-analyzer.md'))).toBe(false);
 
       expect(await fileExists(join(geminiRoot, 'commands/forge/discussion-analyzer.toml'))).toBe(true);
       expect(await fileExists(join(geminiRoot, 'agents/forge-discussion-analyzer.md'))).toBe(true);
       expect(await fileExists(join(geminiRoot, 'forge/workflows/discussion-analyzer.md'))).toBe(true);
+      expect(await fileExists(join(geminiRoot, 'commands/forge/issue-analyzer.toml'))).toBe(true);
+      expect(await fileExists(join(geminiRoot, 'agents/forge-issue-analyzer.md'))).toBe(true);
+      expect(await fileExists(join(geminiRoot, 'forge/workflows/issue-analyzer.md'))).toBe(true);
       expect(await fileExists(join(geminiRoot, 'forge:discussion-analyzer.md'))).toBe(false);
 
       expect(await fileExists(join(copilotRoot, 'forge/bin/forge.mjs'))).toBe(true);
@@ -134,6 +146,11 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       const codexSkill = await readFile(join(tempHomePath, '.codex/skills/forge-discussion-analyzer/SKILL.md'), 'utf8');
       const codexAgentToml = await readFile(join(tempHomePath, '.codex/agents/forge-discussion-analyzer.toml'), 'utf8');
       const geminiCommand = await readFile(join(tempHomePath, '.gemini/commands/forge/discussion-analyzer.toml'), 'utf8');
+      const issueCopilotAgent = await readFile(join(tempHomePath, '.copilot/agents/forge-issue-analyzer.agent.md'), 'utf8');
+      const issueClaudeCommand = await readFile(join(tempHomePath, '.claude/commands/forge/issue-analyzer.md'), 'utf8');
+      const issueCodexSkill = await readFile(join(tempHomePath, '.codex/skills/forge-issue-analyzer/SKILL.md'), 'utf8');
+      const issueCodexAgentToml = await readFile(join(tempHomePath, '.codex/agents/forge-issue-analyzer.toml'), 'utf8');
+      const issueGeminiCommand = await readFile(join(tempHomePath, '.gemini/commands/forge/issue-analyzer.toml'), 'utf8');
 
       expect(copilotAgent).toContain('node "$HOME/.copilot/forge/bin/forge.mjs" --run forge-discussion-analyzer --question');
       expect(claudeCommand).toContain('---\nname: forge:discussion-analyzer');
@@ -144,6 +161,13 @@ describe('CLI Smoke Tests - Installer Flow', () => {
       expect(codexAgentToml).toContain('node "$HOME/.codex/forge/bin/forge.mjs" --run forge-discussion-analyzer --question "<question>"');
       expect(geminiCommand).toContain('Forge backend: node \\"$HOME/.gemini/forge/bin/forge.mjs\\" --run forge-discussion-analyzer --question \\"<question>\\"');
       expect(geminiCommand).toContain('Do not inspect the codebase, search the repository, or read files under ~/.gemini before deciding what to do.');
+      expect(issueCopilotAgent).toContain('node "$HOME/.copilot/forge/bin/forge.mjs" --run forge-issue-analyzer --question');
+      expect(issueClaudeCommand).toContain('---\nname: forge:issue-analyzer');
+      expect(issueClaudeCommand).toContain(`@${join(tempHomePath, '.claude/forge/workflows/issue-analyzer.md')}`);
+      expect(issueCodexSkill).toContain('`$forge-issue-analyzer`');
+      expect(issueCodexSkill).toContain(`@${join(tempHomePath, '.codex/forge/workflows/issue-analyzer.md')}`);
+      expect(issueCodexAgentToml).toContain('node "$HOME/.codex/forge/bin/forge.mjs" --run forge-issue-analyzer --question "<question>"');
+      expect(issueGeminiCommand).toContain('Forge backend: node \\"$HOME/.gemini/forge/bin/forge.mjs\\" --run forge-issue-analyzer --question \\"<question>\\"');
     });
 
     it('preserves user customizations for managed markdown assets on reinstall', async () => {
@@ -388,9 +412,13 @@ describe('CLI Smoke Tests - Installer Flow', () => {
 
         expect(installRun.exitCode).toBe(0);
         expect(await fileExists(join(packedHomePath, '.copilot/agents/forge-discussion-analyzer.agent.md'))).toBe(true);
+        expect(await fileExists(join(packedHomePath, '.copilot/agents/forge-issue-analyzer.agent.md'))).toBe(true);
         expect(await fileExists(join(packedHomePath, '.claude/commands/forge/discussion-analyzer.md'))).toBe(true);
+        expect(await fileExists(join(packedHomePath, '.claude/commands/forge/issue-analyzer.md'))).toBe(true);
         expect(await fileExists(join(packedHomePath, '.codex/skills/forge-discussion-analyzer/SKILL.md'))).toBe(true);
+        expect(await fileExists(join(packedHomePath, '.codex/skills/forge-issue-analyzer/SKILL.md'))).toBe(true);
         expect(await fileExists(join(packedHomePath, '.gemini/commands/forge/discussion-analyzer.toml'))).toBe(true);
+        expect(await fileExists(join(packedHomePath, '.gemini/commands/forge/issue-analyzer.toml'))).toBe(true);
         expect(await fileExists(join(installPath, '.codex'))).toBe(false);
         expect(await fileExists(join(installPath, '.gemini'))).toBe(false);
       } finally {

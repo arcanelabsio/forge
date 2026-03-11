@@ -759,6 +759,9 @@ describe('Discussions services', () => {
   });
 
   it('does not keyword-trim an explicitly scoped category health result set', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-03T12:00:00.000Z'));
+
     const run = {
       version: '1.0' as const,
       id: '2026-03-03T13-00-00-000Z',
@@ -840,6 +843,7 @@ describe('Discussions services', () => {
       expect(answer).toContain('Provisioning stuck');
     } finally {
       fetchSpy.mockRestore();
+      vi.useRealTimers();
     }
   });
 

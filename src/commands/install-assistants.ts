@@ -3,7 +3,7 @@ import path from 'node:path';
 import readline from 'node:readline/promises';
 import { assistantInstallService } from '../services/assistants/install.js';
 import { AssistantId, AssistantOperationResult } from '../contracts/assistants.js';
-import { forgeDiscussionAnalyzerEntry } from '../services/assistants/summonables.js';
+import { forgeDiscussionAnalyzerEntry, forgeIssueAnalyzerEntry } from '../services/assistants/summonables.js';
 import { getExposedSummonableName } from '../services/assistants/exposure.js';
 
 const DEFAULT_ASSISTANTS: AssistantId[] = ['copilot', 'claude', 'codex', 'gemini'];
@@ -63,7 +63,12 @@ export async function installAssistantsCommand(
     
     if (hasSuccess) {
       const successMessage = buildSuccessMessage(requestedAssistants);
-      console.log(interactive ? `\n${styling.green('Done!')} ${successMessage}` : successMessage);
+      if (interactive) {
+        console.log(`\n${styling.green('Done!')}`);
+        console.log(successMessage);
+      } else {
+        console.log(successMessage);
+      }
     } else {
       console.log('\nForge assistant assets were not installed or updated. Check the status messages above.');
     }
@@ -126,26 +131,33 @@ function printInstallTargets(
 }
 
 function buildSuccessMessage(assistantIds: AssistantId[]): string {
-  const notes: string[] = [];
+  const lines: string[] = ['Available Forge entrypoints:'];
+  const discussionSkill = getExposedSummonableName('codex', 'skill', forgeDiscussionAnalyzerEntry);
+  const issueSkill = getExposedSummonableName('codex', 'skill', forgeIssueAnalyzerEntry);
+  const discussionClaudeCommand = getExposedSummonableName('claude', 'command', forgeDiscussionAnalyzerEntry);
+  const issueClaudeCommand = getExposedSummonableName('claude', 'command', forgeIssueAnalyzerEntry);
+  const discussionGeminiCommand = getExposedSummonableName('gemini', 'command', forgeDiscussionAnalyzerEntry);
+  const issueGeminiCommand = getExposedSummonableName('gemini', 'command', forgeIssueAnalyzerEntry);
 
   if (assistantIds.includes('copilot')) {
-    notes.push('Copilot can use `/agent forge-discussion-analyzer`, and gh copilot can delegate to the matching `forge-discussion-analyzer` skill');
+    lines.push('- Copilot agents: `/agent forge-discussion-analyzer`, `/agent forge-issue-analyzer`');
+    lines.push('- Copilot skills (gh copilot): `forge-discussion-analyzer`, `forge-issue-analyzer`');
   }
 
   if (assistantIds.includes('claude')) {
-    notes.push(`Claude can use the installed ${getExposedSummonableName('claude', 'command', forgeDiscussionAnalyzerEntry)} command`);
+    lines.push(`- Claude commands: \`${discussionClaudeCommand}\`, \`${issueClaudeCommand}\``);
   }
 
   if (assistantIds.includes('codex')) {
-    notes.push(`Codex can use the installed $${getExposedSummonableName('codex', 'skill', forgeDiscussionAnalyzerEntry)} skill`);
+    lines.push(`- Codex skills: \`$${discussionSkill}\`, \`$${issueSkill}\``);
   }
 
   if (assistantIds.includes('gemini')) {
-    notes.push(`Gemini can use the installed ${getExposedSummonableName('gemini', 'command', forgeDiscussionAnalyzerEntry)} command`);
+    lines.push(`- Gemini commands: \`${discussionGeminiCommand}\`, \`${issueGeminiCommand}\``);
   }
 
-  return notes.length > 0
-    ? `${notes.join(', ')}.`
+  return lines.length > 1
+    ? lines.join('\n')
     : 'Forge assistant assets are ready.';
 }
 
@@ -172,7 +184,7 @@ export function renderInteractiveInstallerScreen(version: string, styling: Insta
     ...bannerLines,
     '',
     `  ${styling.bold(`Forge v${version}`)}`,
-    `  ${styling.dim('Live-fetch GitHub Discussions installer for GitHub Copilot, Claude Code, Gemini, and Codex.')}`,
+    `  ${styling.dim('Live-fetch GitHub Discussions and Issues installer for GitHub Copilot, Claude Code, Gemini, and Codex.')}`,
     '',
     `  ${styling.bold('Which runtime(s) would you like to install for?')}`,
     '',
