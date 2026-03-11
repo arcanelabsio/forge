@@ -27,6 +27,10 @@ describe('Codex assistant translation', () => {
     const agentPath = join(tempHomePath, '.codex/agents/forge-discussion-analyzer.md');
     const agentTomlPath = join(tempHomePath, '.codex/agents/forge-discussion-analyzer.toml');
     const workflowPath = join(tempHomePath, '.codex/forge/workflows/discussion-analyzer.md');
+    const issueSkillPath = join(tempHomePath, '.codex/skills/forge-issue-analyzer/SKILL.md');
+    const issueAgentPath = join(tempHomePath, '.codex/agents/forge-issue-analyzer.md');
+    const issueAgentTomlPath = join(tempHomePath, '.codex/agents/forge-issue-analyzer.toml');
+    const issueWorkflowPath = join(tempHomePath, '.codex/forge/workflows/issue-analyzer.md');
 
     expect(result.status).toBe('success');
     expect(await readFile(skillPath, 'utf8')).toContain('`$forge-discussion-analyzer`');
@@ -36,6 +40,12 @@ describe('Codex assistant translation', () => {
     expect(await readFile(agentTomlPath, 'utf8')).toContain('sandbox_mode = "workspace-write"');
     expect(await readFile(agentTomlPath, 'utf8')).toContain('node "$HOME/.codex/forge/bin/forge.mjs" --run forge-discussion-analyzer --question "<question>"');
     expect(await readFile(workflowPath, 'utf8')).toContain('node "$HOME/.codex/forge/bin/forge.mjs" --run forge-discussion-analyzer --question "$ARGUMENTS"');
+
+    expect(await readFile(issueSkillPath, 'utf8')).toContain('`$forge-issue-analyzer`');
+    expect(await readFile(issueSkillPath, 'utf8')).toContain(`@${issueWorkflowPath}`);
+    expect(await readFile(issueAgentPath, 'utf8')).toContain('node "$HOME/.codex/forge/bin/forge.mjs" --run forge-issue-analyzer --question "<question>"');
+    expect(await readFile(issueAgentTomlPath, 'utf8')).toContain('node "$HOME/.codex/forge/bin/forge.mjs" --run forge-issue-analyzer --question "<question>"');
+    expect(await readFile(issueWorkflowPath, 'utf8')).toContain('node "$HOME/.codex/forge/bin/forge.mjs" --run forge-issue-analyzer --question "$ARGUMENTS"');
   });
 
   it('preserves Codex skill customizations on reinstall', async () => {
@@ -193,7 +203,11 @@ describe('Gemini assistant translation', () => {
     const commandPath = join(tempHomePath, '.gemini/commands/forge/discussion-analyzer.toml');
     const agentPath = join(tempHomePath, '.gemini/agents/forge-discussion-analyzer.md');
     const workflowPath = join(tempHomePath, '.gemini/forge/workflows/discussion-analyzer.md');
+    const issueCommandPath = join(tempHomePath, '.gemini/commands/forge/issue-analyzer.toml');
+    const issueAgentPath = join(tempHomePath, '.gemini/agents/forge-issue-analyzer.md');
+    const issueWorkflowPath = join(tempHomePath, '.gemini/forge/workflows/issue-analyzer.md');
     const command = await readFile(commandPath, 'utf8');
+    const issueCommand = await readFile(issueCommandPath, 'utf8');
 
     expect(result.status).toBe('success');
     expect(command).toContain('Forge backend: node \\"$HOME/.gemini/forge/bin/forge.mjs\\" --run forge-discussion-analyzer --question \\"<question>\\"');
@@ -201,6 +215,10 @@ describe('Gemini assistant translation', () => {
     expect(await readFile(agentPath, 'utf8')).toContain('tools:\n  - read_file\n  - run_shell_command');
     expect(await readFile(agentPath, 'utf8')).toContain('node "$HOME/.gemini/forge/bin/forge.mjs" --run forge-discussion-analyzer --question "<question>"');
     expect(await readFile(workflowPath, 'utf8')).toContain('node "$HOME/.gemini/forge/bin/forge.mjs" --run forge-discussion-analyzer --question "$ARGUMENTS"');
+
+    expect(issueCommand).toContain('Forge backend: node \\"$HOME/.gemini/forge/bin/forge.mjs\\" --run forge-issue-analyzer --question \\"<question>\\"');
+    expect(await readFile(issueAgentPath, 'utf8')).toContain('node "$HOME/.gemini/forge/bin/forge.mjs" --run forge-issue-analyzer --question "<question>"');
+    expect(await readFile(issueWorkflowPath, 'utf8')).toContain('node "$HOME/.gemini/forge/bin/forge.mjs" --run forge-issue-analyzer --question "$ARGUMENTS"');
   });
 
   it('preserves Gemini agent customizations on reinstall', async () => {

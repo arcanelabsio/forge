@@ -1,6 +1,6 @@
 # Forge
 
-Forge installs a GitHub Copilot discussion-analysis runtime under `~/.copilot`, Claude assets under `~/.claude`, Codex assets under `~/.codex`, and Gemini assets under `~/.gemini`.
+Forge installs GitHub discussion-analysis and issue-analysis runtimes under `~/.copilot`, `~/.claude`, `~/.codex`, and `~/.gemini`.
 
 ## Install
 
@@ -30,41 +30,54 @@ npm_config_prefer_online=true npx forge-ai-assist@latest
 In Copilot:
 
 1. Run `/agent`
-2. Select `forge-discussion-analyzer`
-3. Ask a question about GitHub Discussions
+2. Select `forge-discussion-analyzer` or `forge-issue-analyzer`
+3. Ask a question about GitHub Discussions or GitHub Issues
 
-For `gh copilot`, Forge also installs a matching skill at `~/.copilot/skills/forge-discussion-analyzer/SKILL.md` so agent delegation resolves back to the same Forge command instead of failing with `Skill not found`.
+For `gh copilot`, Forge installs matching skills at:
+- `~/.copilot/skills/forge-discussion-analyzer/SKILL.md`
+- `~/.copilot/skills/forge-issue-analyzer/SKILL.md`
+
+This keeps delegation pointed at the same Forge command instead of failing with `Skill not found`.
 
 In Claude Code:
 
-1. Use the installed `forge:discussion-analyzer` command
-2. The command delegates to the installed `forge-discussion-analyzer` agent and the runtime bundle under `~/.claude/forge`
-3. Ask a question about GitHub Discussions
+1. Use the installed `forge:discussion-analyzer` or `forge:issue-analyzer` command
+2. The command delegates to the matching installed agent and the runtime bundle under `~/.claude/forge`
+3. Ask a question about GitHub Discussions or GitHub Issues
 
 In Codex:
 
-1. Use the installed `$forge-discussion-analyzer` skill from `~/.codex/skills/forge-discussion-analyzer/SKILL.md`
+1. Use `$forge-discussion-analyzer` or `$forge-issue-analyzer` from `~/.codex/skills/`
 2. Codex also gets a matching agent and agent TOML under `~/.codex/agents/`
-3. Ask a question about GitHub Discussions
+3. Ask a question about GitHub Discussions or GitHub Issues
 
 In Gemini:
 
-1. Use the installed `forge:discussion-analyzer` command from `~/.gemini/commands/forge/discussion-analyzer.toml`
+1. Use `forge:discussion-analyzer` or `forge:issue-analyzer` from `~/.gemini/commands/forge/`
 2. Gemini also gets a matching agent under `~/.gemini/agents/`
-3. Ask a question about GitHub Discussions
+3. Ask a question about GitHub Discussions or GitHub Issues
 
 ## Custom Instructions
 
 Forge installs:
 - `~/.copilot/agents/forge-discussion-analyzer.agent.md`
 - `~/.copilot/skills/forge-discussion-analyzer/SKILL.md`
+- `~/.copilot/agents/forge-issue-analyzer.agent.md`
+- `~/.copilot/skills/forge-issue-analyzer/SKILL.md`
 - `~/.claude/commands/forge/discussion-analyzer.md`
 - `~/.claude/agents/forge-discussion-analyzer.md`
+- `~/.claude/commands/forge/issue-analyzer.md`
+- `~/.claude/agents/forge-issue-analyzer.md`
 - `~/.codex/skills/forge-discussion-analyzer/SKILL.md`
 - `~/.codex/agents/forge-discussion-analyzer.md`
 - `~/.codex/agents/forge-discussion-analyzer.toml`
+- `~/.codex/skills/forge-issue-analyzer/SKILL.md`
+- `~/.codex/agents/forge-issue-analyzer.md`
+- `~/.codex/agents/forge-issue-analyzer.toml`
 - `~/.gemini/commands/forge/discussion-analyzer.toml`
 - `~/.gemini/agents/forge-discussion-analyzer.md`
+- `~/.gemini/commands/forge/issue-analyzer.toml`
+- `~/.gemini/agents/forge-issue-analyzer.md`
 
 The markdown assets include a preserved user-customizations block.
 
@@ -77,7 +90,8 @@ The markdown assets include a preserved user-customizations block.
 
 ## Notes
 
-- This discussion-analyzer works with GitHub Discussions only, not GitHub Issues.
+- `forge-discussion-analyzer` works with GitHub Discussions only.
+- `forge-issue-analyzer` works with GitHub Issues only.
 - Analysis traces are written to the repository `.forge` directory.
 - Forge installs into `~/.copilot`, `~/.claude`, `~/.codex`, and `~/.gemini`. It does not install any files under `~/.config/gh`.
 - If Forge hits a network or GitHub API timeout, the installed Copilot agent is expected to report the Forge failure and stop rather than falling back to raw `gh api` calls.

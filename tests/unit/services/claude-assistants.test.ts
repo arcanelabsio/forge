@@ -26,6 +26,9 @@ describe('Claude assistant translation', () => {
     const commandPath = join(tempHomePath, '.claude/commands/forge/discussion-analyzer.md');
     const agentPath = join(tempHomePath, '.claude/agents/forge-discussion-analyzer.md');
     const workflowPath = join(tempHomePath, '.claude/forge/workflows/discussion-analyzer.md');
+    const issueCommandPath = join(tempHomePath, '.claude/commands/forge/issue-analyzer.md');
+    const issueAgentPath = join(tempHomePath, '.claude/agents/forge-issue-analyzer.md');
+    const issueWorkflowPath = join(tempHomePath, '.claude/forge/workflows/issue-analyzer.md');
     const runtimeEntryPath = join(tempHomePath, '.claude/forge/bin/forge.mjs');
 
     expect(result.status).toBe('success');
@@ -33,6 +36,9 @@ describe('Claude assistant translation', () => {
     const command = await readFile(commandPath, 'utf8');
     const agent = await readFile(agentPath, 'utf8');
     const workflow = await readFile(workflowPath, 'utf8');
+    const issueCommand = await readFile(issueCommandPath, 'utf8');
+    const issueAgent = await readFile(issueAgentPath, 'utf8');
+    const issueWorkflow = await readFile(issueWorkflowPath, 'utf8');
 
     expect(command).toContain('---\nname: forge:discussion-analyzer');
     expect(command).toContain('argument-hint: "<question>"');
@@ -47,6 +53,14 @@ describe('Claude assistant translation', () => {
 
     expect(workflow).toContain('node "$HOME/.claude/forge/bin/forge.mjs" --run forge-discussion-analyzer --question "$ARGUMENTS"');
     expect(workflow).toContain('Every query must use Forge live fetches');
+
+    expect(issueCommand).toContain('---\nname: forge:issue-analyzer');
+    expect(issueCommand).toContain(`@${issueWorkflowPath}`);
+    expect(issueAgent).toContain('---\nname: forge-issue-analyzer');
+    expect(issueAgent).toContain('You are the Forge Issue Analyzer.');
+    expect(issueAgent).toContain('node "$HOME/.claude/forge/bin/forge.mjs" --run forge-issue-analyzer --question "<question>"');
+    expect(issueWorkflow).toContain('node "$HOME/.claude/forge/bin/forge.mjs" --run forge-issue-analyzer --question "$ARGUMENTS"');
+
     await expect(access(runtimeEntryPath)).resolves.toBeUndefined();
     await expect(access(join(tempHomePath, '.claude/skills/forge:discussion-analyzer/SKILL.md'))).rejects.toThrow();
   });

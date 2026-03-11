@@ -58,6 +58,13 @@ export class GitHubDiscussionsFetchError extends UserFacingError {
   }
 }
 
+export class GitHubIssuesFetchError extends UserFacingError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GitHubIssuesFetchError';
+  }
+}
+
 export class DiscussionArtifactsRequiredError extends UserFacingError {
   constructor(
     message = 'No discussion artifacts found. Fetch discussions first with Forge before running forge-discussion-analyzer.'
@@ -71,5 +78,21 @@ export class DiscussionsOnlyAnalyzerError extends UserFacingError {
   constructor(message: string) {
     super(message);
     this.name = 'DiscussionsOnlyAnalyzerError';
+  }
+}
+
+export class IssueArtifactsRequiredError extends UserFacingError {
+  constructor(
+    message = 'No issue artifacts found. Fetch issues first with Forge before running forge-issue-analyzer.'
+  ) {
+    super(message);
+    this.name = 'IssueArtifactsRequiredError';
+  }
+}
+
+export class IssuesOnlyAnalyzerError extends UserFacingError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'IssuesOnlyAnalyzerError';
   }
 }
