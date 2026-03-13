@@ -111,8 +111,8 @@ function renderAnalyzerAgentPrompt(entry: SummonableEntry, runtimeEntryCommand: 
     `- Run \`${runCommand}\` directly instead of delegating to unrelated helpers.`,
     `- Every query must use a live fetch through Forge; never answer from local cached ${context.subjectSingularLower} summaries alone.`,
     '- Ask for approval once for the Forge command, then let Forge handle fetch plus analysis.',
-    '- Do not run npm install, repair Forge dependencies, or switch to raw GitHub API calls when Forge is available.',
-    '- If Forge fails or times out because of network or GitHub API issues, report the Forge failure and stop.',
+    '- Do not run npm install or repair Forge dependencies.',
+    '- If Forge fails or times out because of network or GitHub API issues, fall back to `gh` CLI to fetch the data directly.',
     '- Delegate data acquisition, filtering, preprocessing, and freshness handling to Forge.',
     `- Suggest narrowing by ${context.narrowingHint} when the user needs a smaller slice.`,
     '</instructions>',
@@ -188,8 +188,8 @@ export function renderClaudeWorkflow(_entry: SummonableEntry, runtimeEntryComman
     `- Every query must use Forge live fetches; do not answer from local ${context.subjectSingularLower} summary content alone.`,
     `- If the request is about ${context.counterpartPlural} instead of ${context.subjectPlural}, explain that this workflow only covers ${context.subjectPlural} and stop.`,
     '- Ask for approval once for the Forge command, then let Forge handle fetch plus analysis.',
-    '- Do not run npm install, repair Forge dependencies, or switch to raw GitHub API calls when Forge is available.',
-    '- If Forge fails or times out because of network or GitHub API issues, report the Forge failure and stop.',
+    '- Do not run npm install or repair Forge dependencies.',
+    '- If Forge fails or times out because of network or GitHub API issues, fall back to `gh` CLI to fetch the data directly.',
   ].join('\n');
 }
 
@@ -273,8 +273,8 @@ export function renderCodexAgentToml(entry: SummonableEntry, runtimeEntryCommand
     `- Run \`${runCommand}\` directly instead of delegating to unrelated helpers.`,
     '- Every query must use a live fetch through Forge; never answer from local cached summaries alone.',
     '- Ask for approval once for the Forge command, then let Forge handle fetch plus analysis.',
-    '- Do not run npm install, repair Forge dependencies, or switch to raw GitHub API calls when Forge is available.',
-    '- If Forge fails or times out because of network or GitHub API issues, report the Forge failure and stop.',
+    '- Do not run npm install or repair Forge dependencies.',
+    '- If Forge fails or times out because of network or GitHub API issues, fall back to `gh` CLI to fetch the data directly.',
     '</instructions>',
   ].join('\n');
 
@@ -310,7 +310,7 @@ export function renderGeminiCommand(entry: SummonableEntry, workflowPath: string
     'Run the Forge backend directly from the current repository once you have a concrete question.',
     'Preserve the live-fetch-only behavior for every query.',
     `If the request is about ${context.counterpartPlural} instead of ${context.subjectPlural}, explain that limitation and stop.`,
-    'If Forge fails or times out because of network, auth, or GitHub API issues, report the Forge failure and stop.',
+    'If Forge fails or times out because of network, auth, or GitHub API issues, fall back to `gh` CLI to fetch the data directly.',
     '</process>',
   ].join('\n');
 
