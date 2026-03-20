@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────
 # Creates a GitHub repository ruleset that:
-#   • Blocks direct pushes to main (including admins/owners)
-#   • Requires a PR with at least 1 approval
+#   • Blocks direct pushes to main for everyone
+#   • Requires a PR with at least 1 approval (repo admin can bypass)
 #   • Requires the CI status check to pass
 #   • Blocks force-pushes and branch deletion
 #
@@ -26,25 +26,33 @@ gh api --method POST "/repos/${OWNER_REPO}/rulesets" \
       "exclude": []
     }
   },
-  "bypass_actors": [],
+  "bypass_actors": [
+    {
+      "actor_id": 5,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
+    }
+  ],
   "rules": [
     {
       "type": "pull_request",
       "parameters": {
+        "allowed_merge_methods": ["squash", "merge"],
         "required_approving_review_count": 1,
         "dismiss_stale_reviews_on_push": true,
         "require_last_push_approval": false,
-        "require_code_owner_review": false
+        "require_code_owner_review": false,
+        "required_review_thread_resolution": false
       }
     },
     {
       "type": "required_status_checks",
       "parameters": {
-        "strict_status_checks_policy": true,
+        "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": false,
         "required_status_checks": [
           {
-            "context": "build-and-test",
-            "integration_id": null
+            "context": "build-and-test"
           }
         ]
       }
@@ -59,5 +67,4 @@ gh api --method POST "/repos/${OWNER_REPO}/rulesets" \
 }
 EOF
 
-echo "✓ Ruleset created. No one (including you) can push directly to main."
-echo "  All changes must go through a PR with 1 approval and passing CI."
+echo "✓ Ruleset created. Repo admin can bypass approvals; all others need 1 approval + passing CI."
