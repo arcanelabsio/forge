@@ -116,8 +116,19 @@ function getAnalyzerPromptContext(entry: ForgePlugin): AnalyzerPromptContext {
   };
 }
 
+const SHARED_RESILIENCE_RULE =
+  '- **Resilience & transparency:** When a command fails or returns unexpected output, do NOT silently retry. Instead: (1) briefly tell the user what failed and why, (2) state what you will try next and why, (3) then proceed. After 3 failed attempts, stop and clearly explain the blocker so the user can unblock you.';
+
 function getAnalyzerExecutionGuidance(entry: ForgePlugin): AnalyzerExecutionGuidance {
   const domain = getAnalyzerDomain(entry);
+  const raw = getAnalyzerExecutionGuidanceRaw(domain);
+  return {
+    ...raw,
+    workflowRules: [...raw.workflowRules, SHARED_RESILIENCE_RULE],
+  };
+}
+
+function getAnalyzerExecutionGuidanceRaw(domain: AnalyzerDomain): AnalyzerExecutionGuidance {
 
   if (domain === 'issues') {
     return {
@@ -323,6 +334,7 @@ function renderAnalyzerAgentPrompt(entry: ForgePlugin): string {
     ...guidance.agentInstructions.map((line) => `- ${line}`),
     `- Every answer must use a fresh live fetch; never answer from stale local notes or cached ${context.subjectSingularLower} summaries alone.`,
     '- Allow all tool executions (Bash, Read, python3, node, and `gh` CLI) needed to fetch and present the analysis without repeated approval prompts. Approve the full analysis pipeline up front.',
+    '- **Resilience & transparency:** When a command fails or returns unexpected output, do NOT silently retry with a different approach. Instead: (1) briefly tell the user what failed and why, (2) state what you will try next and why you expect it to work, (3) then proceed. If after 3 attempts you still cannot fetch the data, stop and clearly explain the blocker so the user can unblock you.',
     '- This analyzer is strictly read-only. Never create, update, close, comment on, or mutate any GitHub resource.',
     '- Do not install `gh` extensions, edit `~/.config/gh`, or run authentication setup flows on the user\'s behalf.',
     '- Summarize the filters and time window you used whenever they materially affect the answer.',
@@ -405,6 +417,7 @@ export function renderClaudeWorkflow(entry: ForgePlugin): string {
     `- Every query must use a fresh live fetch; do not answer from stale local ${context.subjectSingularLower} notes alone.`,
     `- If the request is about ${context.counterpartPlural} instead of ${context.subjectPlural}, explain that this workflow only covers ${context.subjectPlural} and stop.`,
     '- Allow all tool executions (Bash, Read, python3, node, and `gh` CLI) needed to fetch and present the analysis without repeated approval prompts. Approve the full analysis pipeline up front.',
+    '- **Resilience & transparency:** When a command fails or returns unexpected output, do NOT silently retry with a different approach. Instead: (1) briefly tell the user what failed and why, (2) state what you will try next and why you expect it to work, (3) then proceed. If after 3 attempts you still cannot fetch the data, stop and clearly explain the blocker so the user can unblock you.',
     '- This workflow is strictly read-only. Never create, update, close, comment on, or mutate any GitHub resource.',
     '- Do not install `gh` extensions, edit `~/.config/gh`, or run authentication setup flows on the user\'s behalf.',
     `- Suggest narrowing by ${context.narrowingHint} when the user needs a smaller slice.`,
@@ -493,6 +506,7 @@ export function renderCodexAgentToml(entry: ForgePlugin): string {
     ...guidance.agentInstructions.map((line) => `- ${line}`),
     '- Every query must use a fresh live fetch; never answer from stale local notes or cached summaries alone.',
     '- Allow all tool executions (Bash, Read, python3, node, and `gh` CLI) needed to fetch and present the analysis without repeated approval prompts. Approve the full analysis pipeline up front.',
+    '- **Resilience & transparency:** When a command fails or returns unexpected output, do NOT silently retry with a different approach. Instead: (1) briefly tell the user what failed and why, (2) state what you will try next and why you expect it to work, (3) then proceed. If after 3 attempts you still cannot fetch the data, stop and clearly explain the blocker so the user can unblock you.',
     '- This analyzer is strictly read-only. Never create, update, close, comment on, or mutate any GitHub resource.',
     '- Do not install `gh` extensions, edit `~/.config/gh`, or run authentication setup flows on the user\'s behalf.',
     '</instructions>',
@@ -529,6 +543,7 @@ export function renderGeminiCommand(entry: ForgePlugin, workflowPath: string): s
     guidance.geminiPromptLine,
     'Run the read-only GitHub CLI flow directly from the current repository once you have a concrete question.',
     'Allow all tool executions (shell commands, python3, node, and `gh` CLI) needed to fetch and present the analysis without repeated approval prompts.',
+    '**Resilience & transparency:** When a command fails or returns unexpected output, do NOT silently retry. Instead: (1) briefly tell the user what failed and why, (2) state what you will try next, (3) then proceed. After 3 failed attempts, stop and explain the blocker clearly.',
     'Preserve the live-fetch-only behavior for every query.',
     `If the request is about ${context.counterpartPlural} instead of ${context.subjectPlural}, explain that limitation and stop.`,
     'This workflow is strictly read-only — never create, update, close, comment on, or mutate any GitHub resource.',
