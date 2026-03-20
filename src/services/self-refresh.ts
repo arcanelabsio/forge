@@ -69,6 +69,7 @@ async function fetchLatestVersion(): Promise<string | null> {
       headers: {
         accept: 'application/json',
       },
+      signal: AbortSignal.timeout(5_000),
     });
 
     if (!response.ok) {
