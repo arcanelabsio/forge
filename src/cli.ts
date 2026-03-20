@@ -28,6 +28,11 @@ try {
     console.error(error.message);
     process.exitCode = 1;
   } else {
-    throw error;
+    console.error("An unexpected error occurred.");
+    if (error instanceof Error) {
+      console.error(error.message);
+    }
+    console.error("\nIf this looks like a bug, please report it at:\nhttps://github.com/ajitgunturi/forge/issues");
+    process.exitCode = 1;
   }
 }
