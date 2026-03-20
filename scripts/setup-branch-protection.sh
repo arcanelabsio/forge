@@ -31,20 +31,22 @@ gh api --method POST "/repos/${OWNER_REPO}/rulesets" \
     {
       "type": "pull_request",
       "parameters": {
+        "allowed_merge_methods": ["squash", "merge"],
         "required_approving_review_count": 1,
         "dismiss_stale_reviews_on_push": true,
         "require_last_push_approval": false,
-        "require_code_owner_review": false
+        "require_code_owner_review": false,
+        "required_review_thread_resolution": false
       }
     },
     {
       "type": "required_status_checks",
       "parameters": {
-        "strict_status_checks_policy": true,
+        "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": false,
         "required_status_checks": [
           {
-            "context": "build-and-test",
-            "integration_id": null
+            "context": "build-and-test"
           }
         ]
       }
