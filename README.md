@@ -1,7 +1,7 @@
 # Forge
 
 [![npm version](https://img.shields.io/npm/v/forge-ai-assist)](https://www.npmjs.com/package/forge-ai-assist)
-[![CI](https://github.com/ajitgunturi/forge/actions/workflows/ci.yml/badge.svg)](https://github.com/ajitgunturi/forge/actions/workflows/ci.yml)
+[![CI](https://github.com/arcanelabsio/forge/actions/workflows/ci.yml/badge.svg)](https://github.com/arcanelabsio/forge/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org)
 

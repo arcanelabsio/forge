@@ -422,7 +422,7 @@ describe('CLI Smoke Tests - Installer Lifecycle', () => {
 
       expect(manifest.name).toBe('forge-ai-assist');
       expect(manifest.bin).toEqual({ forge: './dist/cli.js' });
-      expect(manifest.repository?.url).toContain('github.com/ajitgunturi/forge.git');
+      expect(manifest.repository?.url).toContain('github.com/arcanelabsio/forge.git');
       expect(manifest.publishConfig?.access).toBe('public');
     });
 

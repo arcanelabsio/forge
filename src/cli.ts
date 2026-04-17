@@ -32,7 +32,7 @@ try {
     if (error instanceof Error) {
       console.error(error.message);
     }
-    console.error("\nIf this looks like a bug, please report it at:\nhttps://github.com/ajitgunturi/forge/issues");
+    console.error("\nIf this looks like a bug, please report it at:\nhttps://github.com/arcanelabsio/forge/issues");
     process.exitCode = 1;
   }
 }
