@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org)
 
-> Built at **[Arcane Labs](https://github.com/arcanelabsio)** — local-first, BYO-AI tools. Sibling projects: [Longeviti](https://github.com/arcanelabsio/longeviti-framework), [Vael](https://github.com/arcanelabsio/vael), [Shellcraft](https://github.com/arcanelabsio/shellcraft).
+> Built at **[Arcane Labs](https://github.com/arcanelabsio)**.
 
 **Give your AI coding assistant superpowers over your GitHub workflow.**
 
