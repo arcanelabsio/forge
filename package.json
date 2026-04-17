@@ -9,13 +9,13 @@
     "cli",
     "forge"
   ],
-  "homepage": "https://github.com/ajitgunturi/forge#readme",
+  "homepage": "https://github.com/arcanelabsio/forge#readme",
   "bugs": {
-    "url": "https://github.com/ajitgunturi/forge/issues"
+    "url": "https://github.com/arcanelabsio/forge/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ajitgunturi/forge.git"
+    "url": "git+https://github.com/arcanelabsio/forge.git"
   },
   "license": "MIT",
   "type": "module",
