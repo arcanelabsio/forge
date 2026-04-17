@@ -6,7 +6,7 @@ Numbered records of architectural decisions in this repo. Each ADR captures the 
 
 - Numbering is sequential, zero-padded to 4 digits (`ADR-0001`, `ADR-0002`).
 - Status is one of `Proposed`, `Accepted`, `Superseded`, `Deprecated`.
-- When an org-level pattern applies, set `applies_pattern: PTRN-NNN` in the frontmatter — see [arcanelabsio-patterns](https://github.com/arcanelabsio/arcanelabsio-patterns).
+- When an org-level pattern applies, set `applies_pattern: PTRN-NNN` in the frontmatter — see [arcanelabsio-patterns](https://github.com/arcanelabsio/arcanelabsio-patterns) (internal to the Arcane Labs org).
 - ADRs are immutable after acceptance. Supersede rather than edit.
 
 ## Template
