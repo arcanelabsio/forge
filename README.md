@@ -5,6 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org)
 
+> Built at **[Arcane Labs](https://github.com/arcanelabsio)** — local-first, BYO-AI tools. Sibling projects: [Longeviti](https://github.com/arcanelabsio/longeviti-framework), [Vael](https://github.com/arcanelabsio/vael), [Shellcraft](https://github.com/arcanelabsio/shellcraft).
+
 **Give your AI coding assistant superpowers over your GitHub workflow.**
 
 Forge is a single CLI that installs plugins into GitHub Copilot, Claude Code, Codex, and Gemini CLI — so every assistant in your toolkit can analyze discussions, review PRs, and coach you on engineering quality. One install, four assistants, zero lock-in.
