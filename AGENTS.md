@@ -25,8 +25,11 @@ Forge is a single CLI that installs read-only GitHub workflow plugins into multi
 ## Where to find the contract
 
 - **Plugin contract:** `src/contracts/forge-plugin.ts`
-- **Adapters:** `src/adapters/{claude,codex,copilot,gemini}/`
-- **Install service:** `src/services/assistant-install-service.ts`
+- **Plugin definitions (single source of truth):** `src/services/assistants/summonables.ts`
+- **Adapters:** `src/services/assistants/{claude,codex,copilot,gemini}.ts`
+- **Adapter interface & registry:** `src/services/assistants/registry.ts`
+- **Native renderers:** `src/services/assistants/runtime-rendering.ts`
+- **Install service:** `src/services/assistants/install.ts`
 - **Architecture doc:** `docs/plugin-architecture.md`
 - **Adding a new plugin:** `docs/adding-skill-agent-template.md`
 - **ADRs:** `docs/adr/` — read these before proposing architectural changes
@@ -38,6 +41,5 @@ Forge is a single CLI that installs read-only GitHub workflow plugins into multi
 npm install                  # once
 npm run build                # tsc
 npm test                     # vitest
-npm run lint
 npx forge-ai-assist@latest status   # sanity check of a local install
 ```
